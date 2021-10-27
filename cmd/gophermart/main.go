@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"log"
 	"net/http"
 	"os"
@@ -17,18 +18,19 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	connURL := "postgresql://postgres:1234@localhost:5432?sslmode=disable"
-	db, err := sql.Open("postgres", connURL)
+	cfg := configurations.New()
+
+	db, err := sql.Open("postgres", cfg.DataBase.DataBaseURI)
 	if err != nil {
 		log.Fatal(err)
 	}
 	servises.MustSetupDatabase(ctx, db)
 
 	repo := database.NewDatabaseRepository(db)
-	handler := servises.SetupRouter(repo)
+	handler := servises.SetupRouter(repo, &cfg.Token)
 
 	server := &http.Server{
-		Addr:    "localhost:8080",
+		Addr:    cfg.ServerAdress,
 		Handler: handler,
 	}
 	go func() {

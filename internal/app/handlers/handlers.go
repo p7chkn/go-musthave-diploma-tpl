@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"net/http"
@@ -10,20 +11,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+//go:generate mockery --name=RepositoryInterface --structname=MockRepositoryInterface --inpackage
 type RepositoryInterface interface {
 	Ping(ctx context.Context) error
 	CreateUser(ctx context.Context, user models.User) (*models.User, error)
 	CheckPassword(ctx context.Context, user models.User) (models.User, error)
 }
 
-func New(repo RepositoryInterface) *Handler {
+func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken) *Handler {
 	return &Handler{
-		repo: repo,
+		repo:     repo,
+		tokenCfg: tokenCfg,
 	}
 }
 
 type Handler struct {
-	repo RepositoryInterface
+	repo     RepositoryInterface
+	tokenCfg *configurations.ConfigToken
 }
 
 func (h *Handler) PingDB(c *gin.Context) {
@@ -35,7 +39,7 @@ func (h *Handler) PingDB(c *gin.Context) {
 	c.String(http.StatusOK, "")
 }
 
-func (h *Handler) Register (c *gin.Context)  {
+func (h *Handler) Register(c *gin.Context) {
 	data := models.User{}
 	err := c.BindJSON(&data)
 	if err != nil {
@@ -52,11 +56,11 @@ func (h *Handler) Register (c *gin.Context)  {
 		h.handleError(c, err)
 		return
 	}
-	tokens, _ := authentication.CreateToken(user.Id)
+	tokens, _ := authentication.CreateToken(user.Id, h.tokenCfg)
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
-func (h *Handler) Login (c *gin.Context) {
+func (h *Handler) Login(c *gin.Context) {
 	data := models.User{}
 	err := c.BindJSON(&data)
 	if err != nil {
@@ -68,7 +72,7 @@ func (h *Handler) Login (c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	tokens, err := authentication.CreateToken(user.Id)
+	tokens, err := authentication.CreateToken(user.Id, h.tokenCfg)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -76,14 +80,14 @@ func (h *Handler) Login (c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
-func (h *Handler) Refresh (c *gin.Context) {
+func (h *Handler) Refresh(c *gin.Context) {
 	data := authentication.RefreshTokenData{}
 	err := c.BindJSON(&data)
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
-	tokens, err := authentication.RefreshToken(data.RefreshToken)
+	tokens, err := authentication.RefreshToken(data.RefreshToken, h.tokenCfg)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -96,7 +100,7 @@ func (h *Handler) handleError(c *gin.Context, err error) {
 	c.IndentedJSON(http.StatusBadRequest, message)
 }
 
-func (h *Handler) handleErrors (c *gin.Context, errorSlice []error) {
+func (h *Handler) handleErrors(c *gin.Context, errorSlice []error) {
 	message := make(map[string]string)
 	for index, err := range errorSlice {
 		message[fmt.Sprintf("Error #1: %v", index)] = err.Error()

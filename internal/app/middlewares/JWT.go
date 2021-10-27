@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-func JWTMiddleware() gin.HandlerFunc {
+func JWTMiddleware(accessSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, err := authentication.TokenValid(c.Request)
+		userID, err := authentication.TokenValid(c.Request, accessSecret)
 		if err != nil {
 			message := make(map[string]string)
 			message["detail"] = err.Error()

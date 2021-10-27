@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt"
+	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"net/http"
 	"strings"
 	"time"
@@ -14,16 +15,16 @@ type RefreshTokenData struct {
 }
 
 type TokenDetails struct {
-	AccessToken string
+	AccessToken  string
 	RefreshToken string
 	AtExpires    int64
 	RtExpires    int64
 }
 
-func CreateToken(userID string) (*TokenDetails, error) {
+func CreateToken(userID string, tokenCfg *configurations.ConfigToken) (*TokenDetails, error) {
 	td := &TokenDetails{}
-	td.AtExpires = time.Now().Add(time.Minute * 15).Unix()
-	td.RtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
+	td.AtExpires = time.Now().Add(time.Minute * time.Duration(tokenCfg.AccessTokenLiveTimeMinutes)).Unix()
+	td.RtExpires = time.Now().Add(time.Hour * 24 * time.Duration(tokenCfg.RefreshTokenLiveTimeDays)).Unix()
 
 	atClaims := jwt.MapClaims{}
 	atClaims["authorized"] = true
@@ -31,7 +32,7 @@ func CreateToken(userID string) (*TokenDetails, error) {
 	atClaims["exp"] = td.AtExpires
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
 	var err error
-	td.AccessToken, err = at.SignedString([]byte("jdnfksdmfksd"))
+	td.AccessToken, err = at.SignedString([]byte(tokenCfg.AccessTokenSecret))
 	if err != nil {
 		return nil, err
 	}
@@ -39,20 +40,20 @@ func CreateToken(userID string) (*TokenDetails, error) {
 	rtClaims["user_id"] = userID
 	rtClaims["exp"] = td.RtExpires
 	rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
-	td.RefreshToken, err = rt.SignedString([]byte("jdnfksdmfksd"))
+	td.RefreshToken, err = rt.SignedString([]byte(tokenCfg.RefreshTokenSecret))
 	if err != nil {
 		return nil, err
 	}
 	return td, nil
 }
 
-func VerifyToken(r *http.Request) (*jwt.Token, error)  {
+func VerifyToken(r *http.Request, accessSecret string) (*jwt.Token, error) {
 	tokenString := ExtractToken(r)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte("jdnfksdmfksd"), nil
+		return []byte(accessSecret), nil
 	})
 	if err != nil {
 		return nil, err
@@ -60,8 +61,8 @@ func VerifyToken(r *http.Request) (*jwt.Token, error)  {
 	return token, nil
 }
 
-func TokenValid(r *http.Request) (string, error) {
-	token, err := VerifyToken(r)
+func TokenValid(r *http.Request, accessSecret string) (string, error) {
+	token, err := VerifyToken(r, accessSecret)
 	if err != nil {
 		return "", err
 	}
@@ -82,7 +83,7 @@ func ExtractToken(r *http.Request) string {
 	return ""
 }
 
-func RefreshToken(refresh string) (*TokenDetails, error) {
+func RefreshToken(refresh string, tokenCfg *configurations.ConfigToken) (*TokenDetails, error) {
 
 	token, err := jwt.Parse(refresh, func(token *jwt.Token) (interface{}, error) {
 
@@ -104,13 +105,13 @@ func RefreshToken(refresh string) (*TokenDetails, error) {
 
 		userId := claims["user_id"].(string)
 
-		ts, createErr := CreateToken(userId)
-		if  createErr != nil {
+		ts, createErr := CreateToken(userId, tokenCfg)
+		if createErr != nil {
 			return nil, err
 		}
 		return ts, nil
 
 	} else {
-		return nil, errors.New( "refresh expired")
+		return nil, errors.New("refresh expired")
 	}
 }
