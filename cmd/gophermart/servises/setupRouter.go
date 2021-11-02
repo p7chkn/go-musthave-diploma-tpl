@@ -12,10 +12,11 @@ func SetupRouter(repo handlers.RepositoryInterface, tokenCfg *configurations.Con
 
 	handler := handlers.New(repo, tokenCfg)
 
-	router.GET("/api/db/ping", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret), handler.PingDB)
+	router.GET("/api/db/ping", handler.PingDB)
 	router.POST("/api/user/register", handler.Register)
 	router.POST("/api/user/login", handler.Login)
 	router.POST("/api/user/refresh", handler.Refresh)
+	router.POST("/api/user/orders", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret), handler.CreateOrder)
 
 	router.HandleMethodNotAllowed = true
 

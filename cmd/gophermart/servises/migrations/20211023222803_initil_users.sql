@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE users (
-    id uuid DEFAULT uuid_generate_v4 (),
+    id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
     login VARCHAR(50) NOT NULL UNIQUE,
     password TEXT NOT NULL,
     first_name VARCHAR(50),

@@ -66,7 +66,7 @@ func TokenValid(r *http.Request, accessSecret string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, ok := token.Claims.(jwt.Claims); !ok && !token.Valid {
+	if !token.Valid {
 		return "", err
 	}
 	mapClaims := token.Claims.(jwt.MapClaims)
@@ -97,15 +97,15 @@ func RefreshToken(refresh string, tokenCfg *configurations.ConfigToken) (*TokenD
 		return nil, err
 	}
 
-	if _, ok := token.Claims.(jwt.Claims); !ok && !token.Valid {
+	if !token.Valid {
 		return nil, err
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if ok && token.Valid {
 
-		userId := claims["user_id"].(string)
+		userID := claims["user_id"].(string)
 
-		ts, createErr := CreateToken(userId, tokenCfg)
+		ts, createErr := CreateToken(userID, tokenCfg)
 		if createErr != nil {
 			return nil, err
 		}

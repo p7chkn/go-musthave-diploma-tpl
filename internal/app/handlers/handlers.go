@@ -6,6 +6,7 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,8 @@ type RepositoryInterface interface {
 	Ping(ctx context.Context) error
 	CreateUser(ctx context.Context, user models.User) (*models.User, error)
 	CheckPassword(ctx context.Context, user models.User) (models.User, error)
+	CreateOrder(ctx context.Context, order models.Order) error
+	GetOrders(ctx context.Context, userID string) ([]models.Order, error)
 }
 
 func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken) *Handler {
@@ -94,6 +97,32 @@ func (h *Handler) Refresh(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, tokens)
 }
+
+func (h *Handler) CreateOrder(c *gin.Context) {
+	defer c.Request.Body.Close()
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	order := models.Order{
+		UserID: c.GetString("userID"),
+		Number: string(body),
+		Status: "test",
+	}
+
+	err = h.repo.CreateOrder(c.Request.Context(), order)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.IndentedJSON(http.StatusCreated, "Successful!")
+}
+
 func (h *Handler) handleError(c *gin.Context, err error) {
 	message := make(map[string]string)
 	message["detail"] = err.Error()
