@@ -23,11 +23,11 @@ func (db *PostgreDataBase) CheckPassword(ctx context.Context, user models.User) 
 	resultUser := models.User{}
 	sqlCheckUserPassword := `SELECT id FROM users WHERE login = lower($1) AND password = crypt($2, password) FETCH FIRST ROW ONLY;`
 	query := db.conn.QueryRowContext(ctx, sqlCheckUserPassword, user.Login, user.Password)
-	err := query.Scan(&resultUser.Id)
+	err := query.Scan(&resultUser.ID)
 	if err != nil {
 		return resultUser, err
 	}
-	if resultUser.Id == "" {
+	if resultUser.ID == "" {
 		return resultUser, errors.New("wrong login or password")
 	}
 	return resultUser, nil
@@ -35,12 +35,23 @@ func (db *PostgreDataBase) CheckPassword(ctx context.Context, user models.User) 
 
 func (db *PostgreDataBase) getUser(ctx context.Context, login string) (*models.User, error) {
 	resultUser := &models.User{}
-	sqlGetUser := `SELECT id, login, first_name, last_name, balance, spent FROM users WHERE login = $1`
+	sqlGetUser := `SELECT id, login, first_name, last_name, balance, spend FROM users WHERE login = $1`
 	query := db.conn.QueryRowContext(ctx, sqlGetUser, login)
-	err := query.Scan(&resultUser.Id, &resultUser.Login, &resultUser.FirstName, &resultUser.LastName,
+	err := query.Scan(&resultUser.ID, &resultUser.Login, &resultUser.FirstName, &resultUser.LastName,
 		&resultUser.Balance, &resultUser.Spent)
 	if err != nil {
 		return resultUser, err
 	}
 	return resultUser, nil
+}
+
+func (db *PostgreDataBase) GetBalance(ctx context.Context, userID string) (models.UserBalance, error) {
+	var result models.UserBalance
+	sqlGetBalance := `SELECT balance, spend FROM users WHERE id = $1`
+	query := db.conn.QueryRowContext(ctx, sqlGetBalance, userID)
+	err := query.Scan(&result.Balance, &result.Spent)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
 }

@@ -17,6 +17,8 @@ func SetupRouter(repo handlers.RepositoryInterface, tokenCfg *configurations.Con
 	router.POST("/api/user/login", handler.Login)
 	router.POST("/api/user/refresh", handler.Refresh)
 	router.POST("/api/user/orders", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret), handler.CreateOrder)
+	router.GET("/api/user/orders", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret), handler.GetOrders)
+	router.GET("/api/user/balance", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret), handler.GetBalance)
 
 	router.HandleMethodNotAllowed = true
 

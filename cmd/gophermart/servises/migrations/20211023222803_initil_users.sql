@@ -10,7 +10,7 @@ CREATE TABLE users (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     balance INT DEFAULT 0,
-    spent INT DEFAULT 0
+    spend INT DEFAULT 0
 );
 -- +goose StatementEnd
 

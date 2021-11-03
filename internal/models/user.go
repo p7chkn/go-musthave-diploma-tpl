@@ -5,14 +5,18 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
 )
 
+type UserBalance struct {
+	Balance int `json:"current"`
+	Spent   int `json:"withdrawn"`
+}
+
 type User struct {
-	Id        string `json:"id"`
+	ID        string `json:"id"`
 	Login     string `json:"login"`
 	Password  string `json:"password"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	Balance   int    `json:"balance"`
-	Spent     int    `json:"spent"`
+	UserBalance
 }
 
 func (u *User) Validate() []error {

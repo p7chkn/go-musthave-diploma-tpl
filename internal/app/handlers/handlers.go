@@ -18,7 +18,8 @@ type RepositoryInterface interface {
 	CreateUser(ctx context.Context, user models.User) (*models.User, error)
 	CheckPassword(ctx context.Context, user models.User) (models.User, error)
 	CreateOrder(ctx context.Context, order models.Order) error
-	GetOrders(ctx context.Context, userID string) ([]models.Order, error)
+	GetOrders(ctx context.Context, userID string) ([]interface{}, error)
+	GetBalance(ctx context.Context, userID string) (models.UserBalance, error)
 }
 
 func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken) *Handler {
@@ -59,7 +60,7 @@ func (h *Handler) Register(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	tokens, _ := authentication.CreateToken(user.Id, h.tokenCfg)
+	tokens, _ := authentication.CreateToken(user.ID, h.tokenCfg)
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
@@ -75,7 +76,7 @@ func (h *Handler) Login(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	tokens, err := authentication.CreateToken(user.Id, h.tokenCfg)
+	tokens, err := authentication.CreateToken(user.ID, h.tokenCfg)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -111,16 +112,59 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	order := models.Order{
 		UserID: c.GetString("userID"),
 		Number: string(body),
-		Status: "test",
+		Status: "NEW",
 	}
 
 	err = h.repo.CreateOrder(c.Request.Context(), order)
+	// Тут еще нужно учесть вариации ошибок:
+	// - регистрация заказа, который ты уже регистрировал
+	// - регистрация заказа, который регистрировал кто-то другой
+	// - валидация номера заказа
+	// Вопрос:  нужна ли тут собственного типа ошибка?
+	//
+	// Так же идея еще в том, чтобы в этом проекте был воркерпулл
+	// чтобы в фоне здесь отправить задачи о запросе во внешнюю систему,
+	// для обработки заказа, в зависимости от ответа системы, изменять статус заказа
+	// если статус заказа не окончательный, повторить запрос через N секунд, если статус окончательный,
+	// освободить воркера и вероятно, еще нужно добавить поле о дате завершения заказа в таблицу заказов
+
 	if err != nil {
 		h.handleError(c, err)
 		return
 	}
 
-	c.IndentedJSON(http.StatusCreated, "Successful!")
+	c.String(http.StatusAccepted, "")
+}
+
+func (h *Handler) GetOrders(c *gin.Context) {
+	orders, err := h.repo.GetOrders(c.Request.Context(), c.GetString("userID"))
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, orders)
+}
+
+func (h *Handler) GetBalance(c *gin.Context) {
+	balance, err := h.repo.GetBalance(c.Request.Context(), c.GetString("userID"))
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, balance)
+}
+
+func (h *Handler) MakeWithdraw(c *gin.Context) {
+	// Тут в задании довольно непонятно:
+	// - либо мы тут создаем новый заказ, но с отрицательныйм accrual
+	// - либо мы ищем текущий заказ (среди зарегестрированных) и устанавливаем ему accrual
+	// Отправлять ли тут так же в сторонний сервис запросы о состоянии заказа?
+}
+
+func (h *Handler) GetWithdraws(c *gin.Context) {
+	// Тут несколько зависит от роута выше. Пока не сильно ясно.
+	// тут поле называется sum а в другом месте accrual специально?
+	// по сути, это же та же сущность, что и заказы, просто те из них, что с отрицательным accrual?
 }
 
 func (h *Handler) handleError(c *gin.Context, err error) {
