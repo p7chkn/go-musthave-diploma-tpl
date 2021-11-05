@@ -72,16 +72,37 @@ func (_m *MockRepositoryInterface) CreateUser(ctx context.Context, user models.U
 	return r0, r1
 }
 
-// GetOrders provides a mock function with given fields: ctx, userID
-func (_m *MockRepositoryInterface) GetOrders(ctx context.Context, userID string) ([]models.Order, error) {
+// GetBalance provides a mock function with given fields: ctx, userID
+func (_m *MockRepositoryInterface) GetBalance(ctx context.Context, userID string) (models.UserBalance, error) {
 	ret := _m.Called(ctx, userID)
 
-	var r0 []models.Order
-	if rf, ok := ret.Get(0).(func(context.Context, string) []models.Order); ok {
+	var r0 models.UserBalance
+	if rf, ok := ret.Get(0).(func(context.Context, string) models.UserBalance); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(models.UserBalance)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetOrders provides a mock function with given fields: ctx, userID
+func (_m *MockRepositoryInterface) GetOrders(ctx context.Context, userID string) ([]interface{}, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 []interface{}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []interface{}); ok {
 		r0 = rf(ctx, userID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Order)
+			r0 = ret.Get(0).([]interface{})
 		}
 	}
 

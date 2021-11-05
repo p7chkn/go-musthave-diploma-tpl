@@ -5,12 +5,13 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/handlers"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/middlewares"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 )
 
-func SetupRouter(repo handlers.RepositoryInterface, tokenCfg *configurations.ConfigToken) *gin.Engine {
+func SetupRouter(repo handlers.RepositoryInterface, tokenCfg *configurations.ConfigToken, wp *workers.WorkerPool) *gin.Engine {
 	router := gin.Default()
 
-	handler := handlers.New(repo, tokenCfg)
+	handler := handlers.New(repo, tokenCfg, wp)
 
 	router.GET("/api/db/ping", handler.PingDB)
 	router.POST("/api/user/register", handler.Register)

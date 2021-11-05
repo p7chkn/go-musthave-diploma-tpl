@@ -15,6 +15,8 @@ const (
 	RefreshTokenLiveTimeDays   = 7
 	AccessTokenSecret          = "jdnfksdmfksd"
 	RefreshTokenSecret         = "mcmvmkmsdnfsdmfdsjf"
+	NumOfWorkers               = 10
+	PoolBuffer                 = 1000
 )
 
 type Config struct {
@@ -22,6 +24,7 @@ type Config struct {
 	AccrualSystemAdress string `env:"ACCRUAL_SYSTEM_ADDRESS "`
 	Token               ConfigToken
 	DataBase            ConfigDatabase
+	WorkerPool          ConfigWorkerPool
 }
 
 type ConfigToken struct {
@@ -33,6 +36,11 @@ type ConfigToken struct {
 
 type ConfigDatabase struct {
 	DataBaseURI string `env:"DATABASE_DSN"`
+}
+
+type ConfigWorkerPool struct {
+	NumOfWorkers int `env:"num_of_workers"`
+	PoolBuffer   int `env:"pool_buffer"`
 }
 
 func New() *Config {
@@ -51,10 +59,16 @@ func New() *Config {
 		dbCfg.DataBaseURI = *flagDataBaseURI
 	}
 
+	wpConf := ConfigWorkerPool{
+		NumOfWorkers: NumOfWorkers,
+		PoolBuffer:   PoolBuffer,
+	}
+
 	cfg := Config{
 		ServerAdress: ServerAdress,
 		DataBase:     dbCfg,
 		Token:        tokenCfg,
+		WorkerPool:   wpConf,
 	}
 
 	if *flagServerAdress != ServerAdress {

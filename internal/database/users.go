@@ -12,7 +12,7 @@ func (db *PostgreDataBase) CreateUser(ctx context.Context, user models.User) (*m
 	if err != nil {
 		return nil, err
 	}
-	resultUser, err := db.getUser(ctx, user.Login)
+	resultUser, err := db.getUserByLogin(ctx, user.Login)
 	if err != nil {
 		return nil, err
 	}
@@ -33,10 +33,22 @@ func (db *PostgreDataBase) CheckPassword(ctx context.Context, user models.User) 
 	return resultUser, nil
 }
 
-func (db *PostgreDataBase) getUser(ctx context.Context, login string) (*models.User, error) {
+func (db *PostgreDataBase) getUserByLogin(ctx context.Context, login string) (*models.User, error) {
 	resultUser := &models.User{}
 	sqlGetUser := `SELECT id, login, first_name, last_name, balance, spend FROM users WHERE login = $1`
 	query := db.conn.QueryRowContext(ctx, sqlGetUser, login)
+	err := query.Scan(&resultUser.ID, &resultUser.Login, &resultUser.FirstName, &resultUser.LastName,
+		&resultUser.Balance, &resultUser.Spent)
+	if err != nil {
+		return resultUser, err
+	}
+	return resultUser, nil
+}
+
+func (db *PostgreDataBase) getUser(ctx context.Context, id string) (*models.User, error) {
+	resultUser := &models.User{}
+	sqlGetUser := `SELECT id, login, first_name, last_name, balance, spend FROM users WHERE id = $1`
+	query := db.conn.QueryRowContext(ctx, sqlGetUser, id)
 	err := query.Scan(&resultUser.ID, &resultUser.Login, &resultUser.FirstName, &resultUser.LastName,
 		&resultUser.Balance, &resultUser.Spent)
 	if err != nil {

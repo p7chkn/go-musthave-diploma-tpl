@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"log"
 	"net/http"
 	"os"
@@ -26,8 +27,14 @@ func main() {
 	}
 	servises.MustSetupDatabase(ctx, db)
 
+	wp := workers.New(ctx, cfg.WorkerPool.NumOfWorkers, cfg.WorkerPool.PoolBuffer)
+
+	go func() {
+		wp.Run(ctx)
+	}()
+
 	repo := database.NewDatabaseRepository(db)
-	handler := servises.SetupRouter(repo, &cfg.Token)
+	handler := servises.SetupRouter(repo, &cfg.Token, wp)
 
 	server := &http.Server{
 		Addr:    cfg.ServerAdress,

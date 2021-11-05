@@ -6,6 +6,7 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"io/ioutil"
 	"net/http"
 
@@ -22,16 +23,18 @@ type RepositoryInterface interface {
 	GetBalance(ctx context.Context, userID string) (models.UserBalance, error)
 }
 
-func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken) *Handler {
+func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken, wp *workers.WorkerPool) *Handler {
 	return &Handler{
 		repo:     repo,
 		tokenCfg: tokenCfg,
+		wp:       wp,
 	}
 }
 
 type Handler struct {
 	repo     RepositoryInterface
 	tokenCfg *configurations.ConfigToken
+	wp       *workers.WorkerPool
 }
 
 func (h *Handler) PingDB(c *gin.Context) {

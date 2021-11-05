@@ -31,3 +31,19 @@ func (db *PostgreDataBase) GetOrders(ctx context.Context, userID string) ([]inte
 
 	return result, nil
 }
+
+func (db *PostgreDataBase) getOrder(ctx context.Context, number string) (*models.Order, error) {
+	resultOrder := &models.Order{}
+	sqlGetUser := `SELECT id, user_id, number, status, accrual, uploaded_at FROM orders WHERE number = $1`
+	query := db.conn.QueryRowContext(ctx, sqlGetUser, number)
+	err := query.Scan(&resultOrder.ID, &resultOrder.UserID, &resultOrder.Number, &resultOrder.Status,
+		&resultOrder.Accrual, &resultOrder.UploadedAt)
+	if err != nil {
+		return resultOrder, err
+	}
+	return resultOrder, nil
+}
+
+func (db *PostgreDataBase) ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error {
+	return nil
+}
