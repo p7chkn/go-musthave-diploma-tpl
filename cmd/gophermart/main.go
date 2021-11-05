@@ -12,7 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/servises"
+	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/services"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database"
 )
 
@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	servises.MustSetupDatabase(ctx, db)
+	services.MustSetupDatabase(ctx, db)
 
 	wp := workers.New(ctx, cfg.WorkerPool.NumOfWorkers, cfg.WorkerPool.PoolBuffer)
 
@@ -34,7 +34,7 @@ func main() {
 	}()
 
 	repo := database.NewDatabaseRepository(db)
-	handler := servises.SetupRouter(repo, &cfg.Token, wp)
+	handler := services.SetupRouter(repo, &cfg.Token, wp)
 
 	server := &http.Server{
 		Addr:    cfg.ServerAdress,

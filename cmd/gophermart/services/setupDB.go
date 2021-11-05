@@ -1,17 +1,19 @@
-package servises
+package services
 
 import (
 	"context"
 	"database/sql"
 	"log"
-	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/pressly/goose"
 )
 
 func MustSetupDatabase(ctx context.Context, db *sql.DB) {
-	workDirectory, _ := os.Getwd()
-	migrationsPath := workDirectory + `/cmd/gophermart/servises/migrations`
+	_, b, _, _ := runtime.Caller(0)
+	basePath := filepath.Dir(b)
+	migrationsPath := basePath + "/migrations"
 	err := goose.Up(db, migrationsPath)
 	if err != nil {
 		log.Fatal(err)
