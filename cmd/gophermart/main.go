@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"log"
@@ -19,23 +18,23 @@ import (
 
 func main() {
 
-	fmt.Println("Starting server")
+	log.Println("Starting server")
 	ctx, cancel := context.WithCancel(context.Background())
 
-	fmt.Println("Starting parse configuration")
+	log.Println("Starting parse configuration")
 	cfg := configurations.New()
 
-	fmt.Println("Finish parse configurations, starting connection to db")
+	log.Println("Finish parse configurations, starting connection to db")
 	db, err := sql.Open("postgres", cfg.DataBase.DataBaseURI)
-	fmt.Println("Finish db connection")
+	log.Println("Finish db connection")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Starting setup db")
+	log.Println("Starting setup db")
 	services.MustSetupDatabase(ctx, db)
 
-	fmt.Println("Finish setup db")
+	log.Println("Finish setup db")
 	wp := workers.New(ctx, cfg.WorkerPool.NumOfWorkers, cfg.WorkerPool.PoolBuffer)
 
 	go func() {
