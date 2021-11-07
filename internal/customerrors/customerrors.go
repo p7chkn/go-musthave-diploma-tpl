@@ -24,3 +24,15 @@ func NewRepeatError() *ErrorWithAccrualSystem {
 		Title: "Need repeat",
 	}
 }
+
+type BaseError struct {
+	Err error
+}
+
+func (err *BaseError) Error() string {
+	return fmt.Sprintf("%v", err.Err)
+}
+
+func (err *BaseError) Unwrap() error {
+	return err.Err
+}

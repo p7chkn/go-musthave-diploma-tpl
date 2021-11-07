@@ -14,17 +14,6 @@ type Order struct {
 	Accrual    int       `json:"accrual"`
 }
 
-func (o *Order) Validate() []error {
-	errorSlice := []error{}
-	errorSlice = append(errorSlice, o.validateNumber()...)
-	return errorSlice
-}
-
-func (o *Order) validateNumber() []error {
-	errorSlice := []error{}
-	return errorSlice
-}
-
 type ResponseOrder struct {
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`

@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE orders (
-   id uuid DEFAULT uuid_generate_v4 (),
+   id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY ,
    user_id uuid REFERENCES users(id) ON DELETE CASCADE ,
    number VARCHAR(50) NOT NULL UNIQUE,
    status VARCHAR(50),

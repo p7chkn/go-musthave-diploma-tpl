@@ -22,6 +22,8 @@ func SetupRouter(repo handlers.RepositoryInterface, tokenCfg *configurations.Con
 	router.POST("/api/user/orders", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret, log), handler.CreateOrder)
 	router.GET("/api/user/orders", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret, log), handler.GetOrders)
 	router.GET("/api/user/balance", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret, log), handler.GetBalance)
+	router.POST("/api/user/balance/withdraw", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret, log), handler.MakeWithdraw)
+	router.GET("/api/user/balance/withdrawals", middlewares.JWTMiddleware(tokenCfg.AccessTokenSecret, log), handler.GetWithdraws)
 
 	router.HandleMethodNotAllowed = true
 

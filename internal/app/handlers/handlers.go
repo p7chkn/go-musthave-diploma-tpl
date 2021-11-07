@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"go.uber.org/zap"
@@ -20,8 +22,10 @@ type RepositoryInterface interface {
 	CreateUser(ctx context.Context, user models.User) (*models.User, error)
 	CheckPassword(ctx context.Context, user models.User) (models.User, error)
 	CreateOrder(ctx context.Context, order models.Order) error
-	GetOrders(ctx context.Context, userID string) ([]interface{}, error)
+	GetOrders(ctx context.Context, userID string) ([]models.ResponseOrderWithAccrual, error)
 	GetBalance(ctx context.Context, userID string) (models.UserBalance, error)
+	CreateWithdraw(ctx context.Context, withdraw models.Withdraw, userID string) error
+	GetWithdrawals(ctx context.Context, userID string) ([]models.Withdraw, error)
 }
 
 func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken,
@@ -124,6 +128,7 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	err = h.repo.CreateOrder(c.Request.Context(), order)
+
 	// Тут еще нужно учесть вариации ошибок:
 	// - регистрация заказа, который ты уже регистрировал
 	// - регистрация заказа, который регистрировал кто-то другой
@@ -137,6 +142,15 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	// освободить воркера и вероятно, еще нужно добавить поле о дате завершения заказа в таблицу заказов
 
 	if err != nil {
+		var selfRegisterError *customerrors.OrderAlreadyRegisterByYou
+		if errors.As(err, &selfRegisterError) {
+			c.String(http.StatusOK, "")
+			return
+		}
+		var RegisterError *customerrors.OrderAlreadyRegister
+		if errors.As(err, &RegisterError) {
+			c.String(http.StatusConflict, "")
+		}
 		h.handleError(c, err)
 		return
 	}
@@ -163,16 +177,27 @@ func (h *Handler) GetBalance(c *gin.Context) {
 }
 
 func (h *Handler) MakeWithdraw(c *gin.Context) {
-	// Тут в задании довольно непонятно:
-	// - либо мы тут создаем новый заказ, но с отрицательныйм accrual
-	// - либо мы ищем текущий заказ (среди зарегестрированных) и устанавливаем ему accrual
-	// Отправлять ли тут так же в сторонний сервис запросы о состоянии заказа?
+	withdraw := models.Withdraw{}
+	err := c.BindJSON(&withdraw)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	err = h.repo.CreateWithdraw(c.Request.Context(), withdraw, c.GetString("userID"))
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.String(http.StatusOK, "")
 }
 
 func (h *Handler) GetWithdraws(c *gin.Context) {
-	// Тут несколько зависит от роута выше. Пока не сильно ясно.
-	// тут поле называется sum а в другом месте accrual специально?
-	// по сути, это же та же сущность, что и заказы, просто те из них, что с отрицательным accrual?
+	withdrawals, err := h.repo.GetWithdrawals(c.Request.Context(), c.GetString("userID"))
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, withdrawals)
 }
 
 func (h *Handler) handleError(c *gin.Context, err error) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
+	"go.uber.org/zap"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -15,24 +15,24 @@ type ResponseFromAccrualService struct {
 	Accrual int    `json:"accrual"`
 }
 
-func CheckOrderStatus(accrualURL string,
+func CheckOrderStatus(accrualURL string, log *zap.SugaredLogger,
 	changeStatus func(ctx context.Context, order string, status string, accrual int) error) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		response, err := http.Get(accrualURL)
 		if err != nil {
-			log.Println("Problem with access accrual service")
+			log.Warn("Problem with access accrual service")
 			return customerrors.NewRepeatError()
 		}
 		if response.StatusCode == http.StatusTooManyRequests {
-			log.Println("Accrual service overloaded")
+			log.Warn("Accrual service overloaded")
 			return customerrors.NewRepeatError()
 		}
 		if response.StatusCode == http.StatusInternalServerError {
-			log.Println("Accrual service is unavailable")
+			log.Warn("Accrual service is unavailable")
 			return customerrors.NewRepeatError()
 		}
 		if response.StatusCode == http.StatusNotFound {
-			log.Println("Order not found on accrual service")
+			log.Warn("Order not found on accrual service")
 			return nil
 		}
 		defer response.Body.Close()
@@ -41,11 +41,11 @@ func CheckOrderStatus(accrualURL string,
 			return customerrors.NewRepeatError()
 		}
 		var result ResponseFromAccrualService
-		if err := json.Unmarshal(body, result); err != nil {
+		if err := json.Unmarshal(body, &result); err != nil {
 			return customerrors.NewRepeatError()
 		}
 		if result.Status == "REGISTERED" || result.Status == "PROCESSING" {
-			log.Println("checking order not finished yet")
+			log.Warn("checking order not finished yet")
 			return customerrors.NewRepeatError()
 		}
 
