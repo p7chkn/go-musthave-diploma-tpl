@@ -2,19 +2,21 @@ package workers
 
 import (
 	"context"
-	"log"
+	"go.uber.org/zap"
 	"sync"
 )
 
 type WorkerPool struct {
 	numOfWorkers int
 	inputCh      chan func(ctx context.Context) error
+	log          *zap.SugaredLogger
 }
 
-func New(ctx context.Context, numOfWorkers int, buffer int) *WorkerPool {
+func New(numOfWorkers int, buffer int, log *zap.SugaredLogger) *WorkerPool {
 	wp := &WorkerPool{
 		numOfWorkers: numOfWorkers,
 		inputCh:      make(chan func(ctx context.Context) error, buffer),
+		log:          log,
 	}
 	return wp
 }
@@ -24,21 +26,21 @@ func (wp *WorkerPool) Run(ctx context.Context) {
 	for i := 0; i < wp.numOfWorkers; i++ {
 		wg.Add(1)
 		go func(i int) {
-			log.Printf("Worker #%v start \n", i)
+			wp.log.Infof("Worker #%v start \n", i)
 		outer:
 			for {
 				select {
 				case f := <-wp.inputCh:
 					err := f(ctx)
 					if err != nil {
-						log.Printf("Error on worker #%v: %v\n", i, err.Error())
+						wp.log.Errorf("Error on worker #%v: %v\n", i, err.Error())
 					}
 				case <-ctx.Done():
 					break outer
 				}
 
 			}
-			log.Printf("Worker #%v close\n", i)
+			wp.log.Infof("Worker #%v close\n", i)
 			wg.Done()
 		}(i)
 	}

@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,38 +18,41 @@ import (
 
 func main() {
 
-	log.Println("Starting server")
+	log := logger.InitLogger()
+
+	log.Info("Starting server")
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log.Println("Starting parse configuration")
+	log.Info("Starting parse configuration")
 	cfg := configurations.New()
 
-	log.Println("Finish parse configurations, starting connection to db")
+	log.Info("Finish parse configurations, starting connection to db")
 	db, err := sql.Open("postgres", cfg.DataBase.DataBaseURI)
-	log.Println("Finish db connection")
+	log.Info("Finish db connection")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println("Starting setup db")
-	services.MustSetupDatabase(ctx, db)
+	log.Info("Starting setup db")
+	services.MustSetupDatabase(db, log)
 
-	log.Println("Finish setup db")
-	wp := workers.New(ctx, cfg.WorkerPool.NumOfWorkers, cfg.WorkerPool.PoolBuffer)
+	log.Info("Finish setup db")
+	wp := workers.New(cfg.WorkerPool.NumOfWorkers, cfg.WorkerPool.PoolBuffer, log)
 
 	go func() {
 		wp.Run(ctx)
 	}()
 
 	repo := database.NewDatabaseRepository(db)
-	handler := services.SetupRouter(repo, &cfg.Token, wp)
+	handler := services.SetupRouter(repo, &cfg.Token, wp, log)
 
 	server := &http.Server{
 		Addr:    cfg.ServerAdress,
 		Handler: handler,
 	}
 	go func() {
-		log.Println(server.ListenAndServe())
+		log.Info("Starting server")
+		log.Info(server.ListenAndServe())
 		cancel()
 	}()
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/handlers"
-	"log"
 )
 
 type PostgreDataBase struct {
@@ -23,11 +22,5 @@ func NewDatabase(db *sql.DB) *PostgreDataBase {
 }
 
 func (db *PostgreDataBase) Ping(ctx context.Context) error {
-
-	err := db.conn.PingContext(ctx)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
+	return db.conn.PingContext(ctx)
 }

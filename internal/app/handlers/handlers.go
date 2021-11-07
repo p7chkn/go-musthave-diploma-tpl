@@ -7,6 +7,7 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 
@@ -23,11 +24,13 @@ type RepositoryInterface interface {
 	GetBalance(ctx context.Context, userID string) (models.UserBalance, error)
 }
 
-func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken, wp *workers.WorkerPool) *Handler {
+func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken,
+	wp *workers.WorkerPool, log *zap.SugaredLogger) *Handler {
 	return &Handler{
 		repo:     repo,
 		tokenCfg: tokenCfg,
 		wp:       wp,
+		log:      log,
 	}
 }
 
@@ -35,11 +38,13 @@ type Handler struct {
 	repo     RepositoryInterface
 	tokenCfg *configurations.ConfigToken
 	wp       *workers.WorkerPool
+	log      *zap.SugaredLogger
 }
 
 func (h *Handler) PingDB(c *gin.Context) {
 	err := h.repo.Ping(c.Request.Context())
 	if err != nil {
+		h.log.Errorf("Error occuped on %v: %v", c.Request.RequestURI, err.Error())
 		c.String(http.StatusInternalServerError, "")
 		return
 	}
@@ -172,6 +177,7 @@ func (h *Handler) GetWithdraws(c *gin.Context) {
 
 func (h *Handler) handleError(c *gin.Context, err error) {
 	message := make(map[string]string)
+	h.log.Warnf("Wrong request occuped on %v: %v", c.Request.RequestURI, err.Error())
 	message["detail"] = err.Error()
 	c.IndentedJSON(http.StatusBadRequest, message)
 }

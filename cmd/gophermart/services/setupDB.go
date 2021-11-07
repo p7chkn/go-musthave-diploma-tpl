@@ -1,17 +1,16 @@
 package services
 
 import (
-	"context"
 	"database/sql"
-	"log"
+	"go.uber.org/zap"
 	"path/filepath"
 	"runtime"
 
 	"github.com/pressly/goose"
 )
 
-func MustSetupDatabase(ctx context.Context, db *sql.DB) {
-	log.Println("Enter a migrations start")
+func MustSetupDatabase(db *sql.DB, log *zap.SugaredLogger) {
+	log.Info("Enter a migrations start")
 	_, b, _, _ := runtime.Caller(0)
 	basePath := filepath.Dir(b)
 	migrationsPath := basePath + "/migrations"
