@@ -8,10 +8,13 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/tasks"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,23 +29,26 @@ type RepositoryInterface interface {
 	GetBalance(ctx context.Context, userID string) (models.UserBalance, error)
 	CreateWithdraw(ctx context.Context, withdraw models.Withdraw, userID string) error
 	GetWithdrawals(ctx context.Context, userID string) ([]models.Withdraw, error)
+	ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error
 }
 
 func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken,
-	wp *workers.WorkerPool, log *zap.SugaredLogger) *Handler {
+	wp *workers.WorkerPool, log *zap.SugaredLogger, accrualURL string) *Handler {
 	return &Handler{
-		repo:     repo,
-		tokenCfg: tokenCfg,
-		wp:       wp,
-		log:      log,
+		repo:       repo,
+		tokenCfg:   tokenCfg,
+		wp:         wp,
+		log:        log,
+		accrualURL: accrualURL,
 	}
 }
 
 type Handler struct {
-	repo     RepositoryInterface
-	tokenCfg *configurations.ConfigToken
-	wp       *workers.WorkerPool
-	log      *zap.SugaredLogger
+	repo       RepositoryInterface
+	tokenCfg   *configurations.ConfigToken
+	wp         *workers.WorkerPool
+	log        *zap.SugaredLogger
+	accrualURL string
 }
 
 func (h *Handler) PingDB(c *gin.Context) {
@@ -121,9 +127,21 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	number, err := strconv.Atoi(string(body))
+
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	if !utils.ValidLuhnNumber(number) {
+		c.String(http.StatusUnprocessableEntity, "")
+		return
+	}
+
 	order := models.Order{
 		UserID: c.GetString("userID"),
-		Number: string(body),
+		Number: strconv.Itoa(number),
 		Status: "NEW",
 	}
 
@@ -155,6 +173,8 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	h.wp.Push(tasks.CheckOrderStatus("", h.log, strconv.Itoa(number), h.repo.ChangeOrderStatus))
+
 	c.String(http.StatusAccepted, "")
 }
 
@@ -183,8 +203,22 @@ func (h *Handler) MakeWithdraw(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
+	number, err := strconv.Atoi(withdraw.OrderNumber)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	if !utils.ValidLuhnNumber(number) {
+		c.String(http.StatusUnprocessableEntity, "")
+		return
+	}
 	err = h.repo.CreateWithdraw(c.Request.Context(), withdraw, c.GetString("userID"))
 	if err != nil {
+		var balanceError *customerrors.NotEnoughBalanceForWithdraw
+		if errors.As(err, &balanceError) {
+			c.String(http.StatusPaymentRequired, "")
+			return
+		}
 		h.handleError(c, err)
 		return
 	}

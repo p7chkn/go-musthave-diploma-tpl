@@ -15,10 +15,10 @@ type ResponseFromAccrualService struct {
 	Accrual int    `json:"accrual"`
 }
 
-func CheckOrderStatus(accrualURL string, log *zap.SugaredLogger,
+func CheckOrderStatus(accrualURL string, log *zap.SugaredLogger, orderNumber string,
 	changeStatus func(ctx context.Context, order string, status string, accrual int) error) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
-		response, err := http.Get(accrualURL)
+		response, err := http.Get(accrualURL + orderNumber)
 		if err != nil {
 			log.Warn("Problem with access accrual service")
 			return customerrors.NewRepeatError()
@@ -50,6 +50,7 @@ func CheckOrderStatus(accrualURL string, log *zap.SugaredLogger,
 		}
 
 		if err := changeStatus(ctx, result.Order, result.Status, result.Accrual); err != nil {
+			log.Errorf("error on db side with update status to order: %v", err.Error())
 			return err
 		}
 		return nil

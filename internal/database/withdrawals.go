@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"errors"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"time"
 )
@@ -24,7 +24,7 @@ func (db *PostgreDataBase) CreateWithdraw(ctx context.Context, withdraw models.W
 		return err
 	}
 	if !enough {
-		return errors.New("Not enough balance")
+		return customerrors.NewNotEnoughBalanceForWithdraw()
 	}
 	_, err = tx.ExecContext(ctx, "UPDATE users SET balance = balance - $1 WHERE id = $2", withdraw.Sum, userID)
 	if err != nil {

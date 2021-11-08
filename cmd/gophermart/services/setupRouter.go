@@ -10,10 +10,10 @@ import (
 )
 
 func SetupRouter(repo handlers.RepositoryInterface, tokenCfg *configurations.ConfigToken,
-	wp *workers.WorkerPool, log *zap.SugaredLogger) *gin.Engine {
+	wp *workers.WorkerPool, log *zap.SugaredLogger, accrualURL string) *gin.Engine {
 	router := gin.Default()
 
-	handler := handlers.New(repo, tokenCfg, wp, log)
+	handler := handlers.New(repo, tokenCfg, wp, log, accrualURL)
 
 	router.GET("/api/db/ping", handler.PingDB)
 	router.POST("/api/user/register", handler.Register)

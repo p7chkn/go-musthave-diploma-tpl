@@ -44,7 +44,7 @@ func main() {
 	}()
 
 	repo := database.NewDatabaseRepository(db)
-	handler := services.SetupRouter(repo, &cfg.Token, wp, log)
+	handler := services.SetupRouter(repo, &cfg.Token, wp, log, cfg.AccrualSystemAdress)
 
 	server := &http.Server{
 		Addr:    cfg.ServerAdress,

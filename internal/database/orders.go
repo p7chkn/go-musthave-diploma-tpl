@@ -62,5 +62,35 @@ func (db *PostgreDataBase) getOrder(ctx context.Context, number string) (*models
 }
 
 func (db *PostgreDataBase) ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error {
-	return nil
+	sqlChangeOrderStatus := `UPDATE orders SET accrual = $1, status = $2 WHERE number = $3`
+	sqlAddUserBalance := `UPDATE users SET balance = balance + $1 WHERE id = $2`
+	userID, err := db.getUserIDByOrder(ctx, order)
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, sqlChangeOrderStatus, accrual, status, order)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, sqlAddUserBalance, accrual, userID)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (db *PostgreDataBase) getUserIDByOrder(ctx context.Context, order string) (string, error) {
+	userID := ""
+	sqlGetUserIDByOrder := `SELECT user_id FROM orders WHERE number = $1`
+	query := db.conn.QueryRowContext(ctx, sqlGetUserIDByOrder, order)
+	err := query.Scan(&userID)
+	if err != nil {
+		return userID, err
+	}
+	return userID, nil
 }
