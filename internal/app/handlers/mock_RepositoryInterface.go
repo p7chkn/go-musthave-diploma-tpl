@@ -14,6 +14,20 @@ type MockRepositoryInterface struct {
 	mock.Mock
 }
 
+// ChangeOrderStatus provides a mock function with given fields: ctx, order, status, accrual
+func (_m *MockRepositoryInterface) ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error {
+	ret := _m.Called(ctx, order, status, accrual)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int) error); ok {
+		r0 = rf(ctx, order, status, accrual)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CheckPassword provides a mock function with given fields: ctx, user
 func (_m *MockRepositoryInterface) CheckPassword(ctx context.Context, user models.User) (models.User, error) {
 	ret := _m.Called(ctx, user)
@@ -72,6 +86,20 @@ func (_m *MockRepositoryInterface) CreateUser(ctx context.Context, user models.U
 	return r0, r1
 }
 
+// CreateWithdraw provides a mock function with given fields: ctx, withdraw, userID
+func (_m *MockRepositoryInterface) CreateWithdraw(ctx context.Context, withdraw models.Withdraw, userID string) error {
+	ret := _m.Called(ctx, withdraw, userID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, models.Withdraw, string) error); ok {
+		r0 = rf(ctx, withdraw, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetBalance provides a mock function with given fields: ctx, userID
 func (_m *MockRepositoryInterface) GetBalance(ctx context.Context, userID string) (models.UserBalance, error) {
 	ret := _m.Called(ctx, userID)
@@ -94,15 +122,38 @@ func (_m *MockRepositoryInterface) GetBalance(ctx context.Context, userID string
 }
 
 // GetOrders provides a mock function with given fields: ctx, userID
-func (_m *MockRepositoryInterface) GetOrders(ctx context.Context, userID string) ([]interface{}, error) {
+func (_m *MockRepositoryInterface) GetOrders(ctx context.Context, userID string) ([]models.ResponseOrderWithAccrual, error) {
 	ret := _m.Called(ctx, userID)
 
-	var r0 []interface{}
-	if rf, ok := ret.Get(0).(func(context.Context, string) []interface{}); ok {
+	var r0 []models.ResponseOrderWithAccrual
+	if rf, ok := ret.Get(0).(func(context.Context, string) []models.ResponseOrderWithAccrual); ok {
 		r0 = rf(ctx, userID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]interface{})
+			r0 = ret.Get(0).([]models.ResponseOrderWithAccrual)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetWithdrawals provides a mock function with given fields: ctx, userID
+func (_m *MockRepositoryInterface) GetWithdrawals(ctx context.Context, userID string) ([]models.Withdraw, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 []models.Withdraw
+	if rf, ok := ret.Get(0).(func(context.Context, string) []models.Withdraw); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Withdraw)
 		}
 	}
 

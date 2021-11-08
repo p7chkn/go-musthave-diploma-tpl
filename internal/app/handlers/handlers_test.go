@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -15,10 +18,11 @@ import (
 	"testing"
 )
 
-func SetupRouter(repo RepositoryInterface, tokenCfg *configurations.ConfigToken) *gin.Engine {
+func SetupRouter(repo RepositoryInterface, tokenCfg *configurations.ConfigToken, wp *workers.WorkerPool,
+	log *zap.SugaredLogger, accrualURL string) *gin.Engine {
 	router := gin.Default()
 
-	handler := New(repo, tokenCfg)
+	handler := New(repo, tokenCfg, wp, log, accrualURL)
 
 	router.GET("/api/db/ping", handler.PingDB)
 	router.POST("/api/user/register", handler.Register)
@@ -66,10 +70,17 @@ func TestHandler_PingDB(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			cfg := configurations.NewTokenConfig()
+			log := logger.InitLogger()
+			wp := workers.New(10, 1000, log)
+
+			go func() {
+				wp.Run(ctx)
+			}()
 			repoMock := new(MockRepositoryInterface)
 			repoMock.On("Ping", mock.Anything).Return(tt.mockDB)
-			router := SetupRouter(repoMock, &cfg)
+			router := SetupRouter(repoMock, &cfg, wp, log, "")
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, tt.query, nil)
 			router.ServeHTTP(w, req)
@@ -125,10 +136,17 @@ func TestHandler_Login(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			cfg := configurations.NewTokenConfig()
+			log := logger.InitLogger()
+			wp := workers.New(10, 1000, log)
+
+			go func() {
+				wp.Run(ctx)
+			}()
 			repoMock := new(MockRepositoryInterface)
 			repoMock.On("CheckPassword", mock.Anything, tt.mockUser).Return(tt.mockUser, tt.mockError)
-			router := SetupRouter(repoMock, &cfg)
+			router := SetupRouter(repoMock, &cfg, wp, log, "")
 			w := httptest.NewRecorder()
 			body := strings.NewReader(tt.body)
 			req, _ := http.NewRequest(http.MethodPost, tt.query, body)
@@ -137,7 +155,6 @@ func TestHandler_Login(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fmt.Println(resBody)
 			for _, field := range tt.want.InResponse {
 				assert.Contains(t, string(resBody), field)
 			}
