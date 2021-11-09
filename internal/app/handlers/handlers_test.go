@@ -163,3 +163,78 @@ func TestHandler_Login(t *testing.T) {
 		})
 	}
 }
+
+func TestHandler_Register(t *testing.T) {
+	type want struct {
+		code        int
+		InResponse  []string
+		contentType string
+	}
+	tests := []struct {
+		name      string
+		query     string
+		body      string
+		mockUser  models.User
+		mockError error
+		want      want
+	}{
+		{
+			name:  "success test",
+			query: "/api/user/register",
+			mockUser: models.User{
+				Login:    "test123",
+				Password: "test123",
+			},
+			mockError: nil,
+			body:      `{"login": "test123", "password": "test123"}`,
+			want: want{
+				code:        200,
+				InResponse:  []string{"AccessToken", "RefreshToken"},
+				contentType: "application/json; charset=utf-8",
+			},
+		},
+		{
+			name:  "failed test",
+			query: "/api/user/register",
+			mockUser: models.User{
+				Login:    "test",
+				Password: "test",
+			},
+			mockError: errors.New("invalid user"),
+			body:      `{"login": "test", "password": "test"}`,
+			want: want{
+				code:        400,
+				contentType: "application/json; charset=utf-8",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cfg := configurations.NewTokenConfig()
+			log := logger.InitLogger()
+			wp := workers.New(10, 1000, log)
+
+			go func() {
+				wp.Run(ctx)
+			}()
+			repoMock := new(MockRepositoryInterface)
+			repoMock.On("CreateUser", mock.Anything, tt.mockUser).Return(&tt.mockUser, tt.mockError)
+			router := SetupRouter(repoMock, &cfg, wp, log, "")
+			w := httptest.NewRecorder()
+			body := strings.NewReader(tt.body)
+			req, _ := http.NewRequest(http.MethodPost, tt.query, body)
+			router.ServeHTTP(w, req)
+			resBody, err := ioutil.ReadAll(w.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, field := range tt.want.InResponse {
+				assert.Contains(t, string(resBody), field)
+			}
+			assert.Equal(t, tt.want.code, w.Code)
+			assert.Equal(t, tt.want.contentType, w.Header()["Content-Type"][0])
+		})
+	}
+}
