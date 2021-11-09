@@ -173,7 +173,7 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	h.wp.Push(tasks.CheckOrderStatus("", h.log, strconv.Itoa(number), h.repo.ChangeOrderStatus))
+	h.wp.Push(tasks.CheckOrderStatus(h.accrualURL, h.log, strconv.Itoa(number), h.repo.ChangeOrderStatus))
 
 	c.String(http.StatusAccepted, "")
 }

@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	ServerAdress        = "localhost:8080"
+	ServerAdress        = "localhost:8000"
 	DataBaseURI         = "postgresql://postgres:1234@localhost:5432?sslmode=disable"
-	AccrualSystemAdress = ""
+	AccrualSystemAdress = "http://localhost:8080/"
 	// DataBaseURI  = "postgresql://postgres:1234@localhost:5432?sslmode=disable"
 	AccessTokenLiveTimeMinutes = 15
 	RefreshTokenLiveTimeDays   = 7
@@ -65,10 +65,11 @@ func New() *Config {
 	}
 
 	cfg := Config{
-		ServerAdress: ServerAdress,
-		DataBase:     dbCfg,
-		Token:        tokenCfg,
-		WorkerPool:   wpConf,
+		ServerAdress:        ServerAdress,
+		AccrualSystemAdress: AccrualSystemAdress,
+		DataBase:            dbCfg,
+		Token:               tokenCfg,
+		WorkerPool:          wpConf,
 	}
 
 	if *flagServerAdress != ServerAdress {
