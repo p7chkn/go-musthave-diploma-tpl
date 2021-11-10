@@ -7,16 +7,17 @@ import (
 )
 
 const (
-	ServerAdress        = "localhost:8000"
-	DataBaseURI         = "postgresql://postgres:1234@localhost:5432?sslmode=disable"
-	AccrualSystemAdress = "http://localhost:8080/"
-	// DataBaseURI  = "postgresql://postgres:1234@localhost:5432?sslmode=disable"
+	ServerAdress = "localhost:8000"
+	DataBaseURI  = "postgresql://postgres:1234@localhost:5432?sslmode=disable"
+	//DataBaseURI = ""
+	AccrualSystemAdress        = "http://localhost:8080/"
 	AccessTokenLiveTimeMinutes = 15
 	RefreshTokenLiveTimeDays   = 7
 	AccessTokenSecret          = "jdnfksdmfksd"
 	RefreshTokenSecret         = "mcmvmkmsdnfsdmfdsjf"
 	NumOfWorkers               = 10
 	PoolBuffer                 = 1000
+	MaxJobRetryCount           = 5
 )
 
 type Config struct {
@@ -39,8 +40,9 @@ type ConfigDatabase struct {
 }
 
 type ConfigWorkerPool struct {
-	NumOfWorkers int `env:"num_of_workers"`
-	PoolBuffer   int `env:"pool_buffer"`
+	NumOfWorkers     int `env:"num_of_workers"`
+	PoolBuffer       int `env:"pool_buffer"`
+	MaxJobRetryCount int `env:"max_job_retry_count"`
 }
 
 func New() *Config {
@@ -60,8 +62,9 @@ func New() *Config {
 	}
 
 	wpConf := ConfigWorkerPool{
-		NumOfWorkers: NumOfWorkers,
-		PoolBuffer:   PoolBuffer,
+		NumOfWorkers:     NumOfWorkers,
+		PoolBuffer:       PoolBuffer,
+		MaxJobRetryCount: MaxJobRetryCount,
 	}
 
 	cfg := Config{
@@ -84,6 +87,8 @@ func New() *Config {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	cfg.AccrualSystemAdress += "api/orders/"
 
 	return &cfg
 }

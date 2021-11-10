@@ -2,21 +2,21 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/tasks"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-
-	"github.com/gin-gonic/gin"
+	"time"
 )
 
 //go:generate mockery --name=RepositoryInterface --structname=MockRepositoryInterface --inpackage
@@ -32,10 +32,15 @@ type RepositoryInterface interface {
 	ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error
 }
 
-func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken,
+type JobStoreInterface interface {
+	AddJob(ctx context.Context, job models.JobStoreRow) error
+}
+
+func New(repo RepositoryInterface, jobStore JobStoreInterface, tokenCfg *configurations.ConfigToken,
 	wp *workers.WorkerPool, log *zap.SugaredLogger, accrualURL string) *Handler {
 	return &Handler{
 		repo:       repo,
+		jobStore:   jobStore,
 		tokenCfg:   tokenCfg,
 		wp:         wp,
 		log:        log,
@@ -45,6 +50,7 @@ func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken,
 
 type Handler struct {
 	repo       RepositoryInterface
+	jobStore   JobStoreInterface
 	tokenCfg   *configurations.ConfigToken
 	wp         *workers.WorkerPool
 	log        *zap.SugaredLogger
@@ -147,18 +153,6 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 
 	err = h.repo.CreateOrder(c.Request.Context(), order)
 
-	// Тут еще нужно учесть вариации ошибок:
-	// - регистрация заказа, который ты уже регистрировал
-	// - регистрация заказа, который регистрировал кто-то другой
-	// - валидация номера заказа
-	// Вопрос:  нужна ли тут собственного типа ошибка?
-	//
-	// Так же идея еще в том, чтобы в этом проекте был воркерпулл
-	// чтобы в фоне здесь отправить задачи о запросе во внешнюю систему,
-	// для обработки заказа, в зависимости от ответа системы, изменять статус заказа
-	// если статус заказа не окончательный, повторить запрос через N секунд, если статус окончательный,
-	// освободить воркера и вероятно, еще нужно добавить поле о дате завершения заказа в таблицу заказов
-
 	if err != nil {
 		var selfRegisterError *customerrors.OrderAlreadyRegisterByYou
 		if errors.As(err, &selfRegisterError) {
@@ -172,8 +166,24 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-
-	h.wp.Push(tasks.CheckOrderStatus(h.accrualURL, h.log, strconv.Itoa(number), h.repo.ChangeOrderStatus))
+	parameters, err := json.Marshal(&models.CheckOrderStatusParameters{
+		OrderNumber: strconv.Itoa(number),
+	})
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	job := models.JobStoreRow{
+		Type:            "CheckOrderStatus",
+		NextTimeExecute: time.Now(),
+		Count:           0,
+		Parameters:      string(parameters),
+	}
+	err = h.jobStore.AddJob(c.Request.Context(), job)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
 
 	c.String(http.StatusAccepted, "")
 }

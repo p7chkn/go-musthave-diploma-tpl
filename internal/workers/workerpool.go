@@ -2,27 +2,50 @@ package workers
 
 import (
 	"context"
-	"errors"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
+	"encoding/json"
+	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"go.uber.org/zap"
 	"sync"
 	"time"
 )
 
-type WorkerPool struct {
-	numOfWorkers int
-	inputCh      chan func(ctx context.Context) error
-	log          *zap.SugaredLogger
-	taskToRepeat utils.FunctionStack
+type WorkerPoolJobStoreInterface interface {
+	GetJobToExecute(ctx context.Context, maxCount int) ([]models.JobStoreRow, error)
+	ExecuteJob(ctx context.Context, jobID string) error
+	IncreaseCounter(ctx context.Context, jobID string, count int) error
 }
 
-func New(numOfWorkers int, buffer int, log *zap.SugaredLogger) *WorkerPool {
+type WorkerPoolDataBaseInterface interface {
+	ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error
+}
+
+type Job struct {
+	ID    string
+	Func  func(ctx context.Context) error
+	Count int
+}
+
+type WorkerPool struct {
+	jobStore         WorkerPoolJobStoreInterface
+	db               WorkerPoolDataBaseInterface
+	accrualURL       string
+	numOfWorkers     int
+	inputCh          chan Job
+	log              *zap.SugaredLogger
+	maxJobRetryCount int
+}
+
+func New(jobStore WorkerPoolJobStoreInterface, db WorkerPoolDataBaseInterface, cfg *configurations.ConfigWorkerPool,
+	log *zap.SugaredLogger, accrualURL string) *WorkerPool {
 	wp := &WorkerPool{
-		numOfWorkers: numOfWorkers,
-		inputCh:      make(chan func(ctx context.Context) error, buffer),
-		log:          log,
-		taskToRepeat: utils.NewFunctionStack(),
+		jobStore:         jobStore,
+		db:               db,
+		accrualURL:       accrualURL,
+		numOfWorkers:     cfg.NumOfWorkers,
+		inputCh:          make(chan Job, cfg.PoolBuffer),
+		log:              log,
+		maxJobRetryCount: cfg.MaxJobRetryCount,
 	}
 	return wp
 }
@@ -36,14 +59,19 @@ func (wp *WorkerPool) Run(ctx context.Context) {
 		outer:
 			for {
 				select {
-				case f := <-wp.inputCh:
-					err := f(ctx)
+				case job := <-wp.inputCh:
+					err := job.Func(ctx)
 					if err != nil {
 						wp.log.Errorf("Error on worker #%v: %v\n", i, err.Error())
-						var repeatError *customerrors.RepeatError
-						if errors.As(err, &repeatError) {
-							wp.taskToRepeat.Push(f)
+						err = wp.jobStore.IncreaseCounter(ctx, job.ID, job.Count)
+						if err != nil {
+							wp.log.Errorf("Error with increase job counter with job:%v error:%v", job.ID, err.Error())
 						}
+						continue
+					}
+					err = wp.jobStore.ExecuteJob(ctx, job.ID)
+					if err != nil {
+						wp.log.Errorf("Error with executing job: %v, error: %v", job.ID, err.Error())
 					}
 				case <-ctx.Done():
 					break outer
@@ -60,7 +88,7 @@ func (wp *WorkerPool) Run(ctx context.Context) {
 	sch.Stop()
 }
 
-func (wp *WorkerPool) Push(task func(ctx context.Context) error) {
+func (wp *WorkerPool) push(task Job) {
 	wp.inputCh <- task
 }
 
@@ -72,7 +100,7 @@ func (wp *WorkerPool) scheduler(ctx context.Context) *time.Ticker {
 			select {
 			case <-ticker.C:
 				wp.log.Info("ticker tick")
-				wp.pushToRepeat()
+				wp.transferTaskToWorkerPool(ctx)
 			case <-ctx.Done():
 				return
 			}
@@ -81,12 +109,28 @@ func (wp *WorkerPool) scheduler(ctx context.Context) *time.Ticker {
 	return ticker
 }
 
-func (wp *WorkerPool) pushToRepeat() {
-	for {
-		f, ok := wp.taskToRepeat.Pop()
-		if !ok {
-			break
+func (wp *WorkerPool) transferTaskToWorkerPool(ctx context.Context) {
+	jobs, err := wp.jobStore.GetJobToExecute(ctx, wp.maxJobRetryCount)
+	if err != nil {
+		wp.log.Errorf("Error occured in getting task in worker pool: %v", err.Error())
+		return
+	}
+	for _, job := range jobs {
+		if job.Type == "CheckOrderStatus" {
+			parameters := models.CheckOrderStatusParameters{}
+			err := json.Unmarshal([]byte(job.Parameters), &parameters)
+			if err != nil {
+				wp.log.Errorf("Error with parce parameters, job_id: %v, err: %v", job.ID, err.Error())
+				continue
+			}
+			jobToPush := Job{
+				ID:    job.ID,
+				Func:  checkOrderStatus(wp.accrualURL, wp.log, parameters.OrderNumber, wp.db.ChangeOrderStatus),
+				Count: job.Count,
+			}
+			wp.push(jobToPush)
+		} else {
+			wp.log.Errorf("Get job of unknown type: %v", job.Type)
 		}
-		wp.inputCh <- f
 	}
 }

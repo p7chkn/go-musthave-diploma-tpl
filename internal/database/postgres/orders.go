@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 func (db *PostgreDataBase) CreateOrder(ctx context.Context, order models.Order) error {
 	sqlCreateOrder := `INSERT INTO orders (user_id, number, status, accrual) VALUES ($1, $2, $3, $4)`
 	_, err := db.conn.ExecContext(ctx, sqlCreateOrder, order.UserID, order.Number, order.Status, order.Accrual)
-
 	if err, ok := err.(*pq.Error); ok {
 		if err.Code == pgerrcode.UniqueViolation {
 			existingOrder, err := db.getOrder(ctx, order.Number)
