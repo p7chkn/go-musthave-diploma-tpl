@@ -34,6 +34,9 @@ func (js *JobStore) GetJobToExecute(ctx context.Context, maxCount int) ([]models
 	if err != nil {
 		return result, err
 	}
+	if rows.Err() != nil {
+		return result, rows.Err()
+	}
 	for rows.Next() {
 		var jsRow models.JobStoreRow
 		if err = rows.Scan(&jsRow.ID, &jsRow.Type, &jsRow.NextTimeExecute, &jsRow.Parameters,
