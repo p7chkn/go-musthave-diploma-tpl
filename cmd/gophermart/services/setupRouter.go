@@ -5,15 +5,14 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/handlers"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/middlewares"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"go.uber.org/zap"
 )
 
 func SetupRouter(repo handlers.RepositoryInterface, jobStore handlers.JobStoreInterface, tokenCfg *configurations.ConfigToken,
-	wp *workers.WorkerPool, log *zap.SugaredLogger, accrualURL string) *gin.Engine {
+	log *zap.SugaredLogger) *gin.Engine {
 	router := gin.Default()
 
-	handler := handlers.New(repo, jobStore, tokenCfg, wp, log, accrualURL)
+	handler := handlers.New(repo, jobStore, tokenCfg, log)
 
 	router.GET("/api/db/ping", handler.PingDB)
 	router.POST("/api/user/register", handler.Register)

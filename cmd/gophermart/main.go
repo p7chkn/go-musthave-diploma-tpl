@@ -6,6 +6,7 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database/postgres"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/tasks"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"net/http"
 	"os"
@@ -38,13 +39,18 @@ func main() {
 
 	log.Info("Finish setup db")
 	repo := postgres.NewDatabase(db)
-	wp := workers.New(repo, repo, &cfg.WorkerPool, log, cfg.AccrualSystemAdress)
+	jobStore := postgres.NewJobStore(db)
+	var listTask []tasks.TaskInterface
+	listTask = append(listTask, tasks.NewCheckOrderStatusTask(cfg.AccrualSystemAdress, log, repo.ChangeOrderStatus))
+	taskStore := tasks.NewTaskStore(listTask)
+
+	wp := workers.New(jobStore, taskStore, &cfg.WorkerPool, log)
 
 	go func() {
 		wp.Run(ctx)
 	}()
 
-	handler := services.SetupRouter(repo, repo, &cfg.Token, wp, log, cfg.AccrualSystemAdress)
+	handler := services.SetupRouter(repo, jobStore, &cfg.Token, log)
 
 	server := &http.Server{
 		Addr:    cfg.ServerAdress,

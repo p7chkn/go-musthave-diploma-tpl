@@ -11,7 +11,6 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
@@ -32,29 +31,26 @@ type RepositoryInterface interface {
 	ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error
 }
 
+//go:generate mockery --name=JobStoreInterface --structname=MockJobStoreInterface --inpackage
 type JobStoreInterface interface {
 	AddJob(ctx context.Context, job models.JobStoreRow) error
 }
 
 func New(repo RepositoryInterface, jobStore JobStoreInterface, tokenCfg *configurations.ConfigToken,
-	wp *workers.WorkerPool, log *zap.SugaredLogger, accrualURL string) *Handler {
+	log *zap.SugaredLogger) *Handler {
 	return &Handler{
-		repo:       repo,
-		jobStore:   jobStore,
-		tokenCfg:   tokenCfg,
-		wp:         wp,
-		log:        log,
-		accrualURL: accrualURL,
+		repo:     repo,
+		jobStore: jobStore,
+		tokenCfg: tokenCfg,
+		log:      log,
 	}
 }
 
 type Handler struct {
-	repo       RepositoryInterface
-	jobStore   JobStoreInterface
-	tokenCfg   *configurations.ConfigToken
-	wp         *workers.WorkerPool
-	log        *zap.SugaredLogger
-	accrualURL string
+	repo     RepositoryInterface
+	jobStore JobStoreInterface
+	tokenCfg *configurations.ConfigToken
+	log      *zap.SugaredLogger
 }
 
 func (h *Handler) PingDB(c *gin.Context) {

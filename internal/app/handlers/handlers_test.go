@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -18,11 +16,11 @@ import (
 	"testing"
 )
 
-func SetupRouter(repo RepositoryInterface, tokenCfg *configurations.ConfigToken, wp *workers.WorkerPool,
-	log *zap.SugaredLogger, accrualURL string) *gin.Engine {
+func SetupRouter(repo RepositoryInterface, jobStore JobStoreInterface, tokenCfg *configurations.ConfigToken,
+	log *zap.SugaredLogger) *gin.Engine {
 	router := gin.Default()
 
-	handler := New(repo, tokenCfg, wp, log, accrualURL)
+	handler := New(repo, jobStore, tokenCfg, log)
 
 	router.GET("/api/db/ping", handler.PingDB)
 	router.POST("/api/user/register", handler.Register)
@@ -70,17 +68,12 @@ func TestHandler_PingDB(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
 			cfg := configurations.NewTokenConfig()
 			log := logger.InitLogger()
-			wp := workers.New(10, 1000, log)
-
-			go func() {
-				wp.Run(ctx)
-			}()
 			repoMock := new(MockRepositoryInterface)
+			jobStoreMock := new(MockJobStoreInterface)
 			repoMock.On("Ping", mock.Anything).Return(tt.mockDB)
-			router := SetupRouter(repoMock, &cfg, wp, log, "")
+			router := SetupRouter(repoMock, jobStoreMock, &cfg, log)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, tt.query, nil)
 			router.ServeHTTP(w, req)
@@ -136,17 +129,12 @@ func TestHandler_Login(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
 			cfg := configurations.NewTokenConfig()
 			log := logger.InitLogger()
-			wp := workers.New(10, 1000, log)
-
-			go func() {
-				wp.Run(ctx)
-			}()
 			repoMock := new(MockRepositoryInterface)
+			jobStoreMock := new(MockJobStoreInterface)
 			repoMock.On("CheckPassword", mock.Anything, tt.mockUser).Return(tt.mockUser, tt.mockError)
-			router := SetupRouter(repoMock, &cfg, wp, log, "")
+			router := SetupRouter(repoMock, jobStoreMock, &cfg, log)
 			w := httptest.NewRecorder()
 			body := strings.NewReader(tt.body)
 			req, _ := http.NewRequest(http.MethodPost, tt.query, body)
@@ -211,17 +199,12 @@ func TestHandler_Register(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
 			cfg := configurations.NewTokenConfig()
 			log := logger.InitLogger()
-			wp := workers.New(10, 1000, log)
-
-			go func() {
-				wp.Run(ctx)
-			}()
 			repoMock := new(MockRepositoryInterface)
+			jobStoreMock := new(MockJobStoreInterface)
 			repoMock.On("CreateUser", mock.Anything, tt.mockUser).Return(&tt.mockUser, tt.mockError)
-			router := SetupRouter(repoMock, &cfg, wp, log, "")
+			router := SetupRouter(repoMock, jobStoreMock, &cfg, log)
 			w := httptest.NewRecorder()
 			body := strings.NewReader(tt.body)
 			req, _ := http.NewRequest(http.MethodPost, tt.query, body)

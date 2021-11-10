@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/tasks"
 	"go.uber.org/zap"
 	"sync"
 	"time"
@@ -16,10 +17,6 @@ type WorkerPoolJobStoreInterface interface {
 	IncreaseCounter(ctx context.Context, jobID string, count int) error
 }
 
-type WorkerPoolDataBaseInterface interface {
-	ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error
-}
-
 type Job struct {
 	ID    string
 	Func  func(ctx context.Context) error
@@ -28,20 +25,18 @@ type Job struct {
 
 type WorkerPool struct {
 	jobStore         WorkerPoolJobStoreInterface
-	db               WorkerPoolDataBaseInterface
-	accrualURL       string
+	taskStore        *tasks.TaskStore
 	numOfWorkers     int
 	inputCh          chan Job
 	log              *zap.SugaredLogger
 	maxJobRetryCount int
 }
 
-func New(jobStore WorkerPoolJobStoreInterface, db WorkerPoolDataBaseInterface, cfg *configurations.ConfigWorkerPool,
-	log *zap.SugaredLogger, accrualURL string) *WorkerPool {
+func New(jobStore WorkerPoolJobStoreInterface, taskStore *tasks.TaskStore, cfg *configurations.ConfigWorkerPool,
+	log *zap.SugaredLogger) *WorkerPool {
 	wp := &WorkerPool{
 		jobStore:         jobStore,
-		db:               db,
-		accrualURL:       accrualURL,
+		taskStore:        taskStore,
 		numOfWorkers:     cfg.NumOfWorkers,
 		inputCh:          make(chan Job, cfg.PoolBuffer),
 		log:              log,
@@ -116,21 +111,29 @@ func (wp *WorkerPool) transferTaskToWorkerPool(ctx context.Context) {
 		return
 	}
 	for _, job := range jobs {
-		if job.Type == "CheckOrderStatus" {
-			parameters := models.CheckOrderStatusParameters{}
-			err := json.Unmarshal([]byte(job.Parameters), &parameters)
-			if err != nil {
-				wp.log.Errorf("Error with parce parameters, job_id: %v, err: %v", job.ID, err.Error())
-				continue
-			}
-			jobToPush := Job{
-				ID:    job.ID,
-				Func:  checkOrderStatus(wp.accrualURL, wp.log, parameters.OrderNumber, wp.db.ChangeOrderStatus),
-				Count: job.Count,
-			}
-			wp.push(jobToPush)
-		} else {
+
+		task, ok := wp.taskStore.MapOfTask[job.Type]
+
+		if !ok {
 			wp.log.Errorf("Get job of unknown type: %v", job.Type)
+			continue
 		}
+		parameters := make(map[string]string)
+		err := json.Unmarshal([]byte(job.Parameters), &parameters)
+		if err != nil {
+			wp.log.Errorf("Error with parce parameters, job_id: %v, err: %v", job.ID, err.Error())
+			continue
+		}
+		function, err := task.CreateFunction(parameters)
+		if err != nil {
+			wp.log.Errorf("Wrong paramenters for function, job_id: %v, err: %v", job.ID, err.Error())
+			continue
+		}
+		jobToPush := Job{
+			ID:   job.ID,
+			Func: function,
+		}
+
+		wp.push(jobToPush)
 	}
 }
