@@ -21,8 +21,8 @@ const (
 )
 
 type Config struct {
-	ServerAdress        string `env:"SERVER_ADDRESS"`
-	AccrualSystemAdress string `env:"ACCRUAL_SYSTEM_ADDRESS "`
+	ServerAdress        string `env:"RUN_ADDRESS"`
+	AccrualSystemAdress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
 	Token               ConfigToken
 	DataBase            ConfigDatabase
 	WorkerPool          ConfigWorkerPool
@@ -36,7 +36,7 @@ type ConfigToken struct {
 }
 
 type ConfigDatabase struct {
-	DataBaseURI string `env:"DATABASE_DSN"`
+	DataBaseURI string `env:"DATABASE_URI"`
 }
 
 type ConfigWorkerPool struct {
