@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"github.com/gin-gonic/gin"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database/postgres"
@@ -19,6 +20,7 @@ import (
 
 func main() {
 
+	gin.SetMode(gin.ReleaseMode)
 	log := logger.InitLogger()
 
 	log.Info("Starting server")
