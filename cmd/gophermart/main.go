@@ -9,6 +9,7 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database/postgres"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/tasks"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,8 @@ func main() {
 
 	gin.SetMode(gin.ReleaseMode)
 	log := logger.InitLogger()
+
+	stdlog.SetOutput(os.Stdout)
 
 	log.Info("Starting server")
 	ctx, cancel := context.WithCancel(context.Background())
