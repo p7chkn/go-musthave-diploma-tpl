@@ -2,8 +2,10 @@ package configurations
 
 import (
 	"flag"
+	"fmt"
 	"github.com/caarlos0/env"
 	"log"
+	"os"
 )
 
 const (
@@ -57,6 +59,8 @@ func New() *Config {
 	flagAccrualSystemAdress := flag.String("r", AccrualSystemAdress, "URL for accrual system")
 	flag.Parse()
 
+	fmt.Println(*flagDataBaseURI)
+	fmt.Println(os.Environ())
 	if *flagDataBaseURI != DataBaseURI {
 		dbCfg.DataBaseURI = *flagDataBaseURI
 	}
