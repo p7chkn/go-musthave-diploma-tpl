@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgconn"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database/postgres"
@@ -35,13 +34,6 @@ func main() {
 
 	log.Info("Finish parse configurations, starting connection to db")
 	log.Info(cfg.DataBase.DataBaseURI)
-
-	pgConn, err := pgconn.Connect(context.Background(), cfg.DataBase.DataBaseURI)
-	if err != nil {
-		log.Infof("pgconn failed to connect: %v", err)
-	}
-	defer pgConn.Close(context.Background())
-
 	db, err := sql.Open("postgres", cfg.DataBase.DataBaseURI)
 	log.Info("Finish db connection")
 	if err != nil {
