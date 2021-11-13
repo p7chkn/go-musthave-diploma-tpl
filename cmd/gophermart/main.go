@@ -40,7 +40,7 @@ func main() {
 	}
 
 	log.Info("Starting setup db")
-	services.MustSetupDatabase(db, log)
+	services.MustSetupDatabase(ctx, db, log)
 
 	log.Info("Finish setup db")
 	repo := postgres.NewDatabase(db)

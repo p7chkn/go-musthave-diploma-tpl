@@ -80,7 +80,12 @@ func (h *Handler) Register(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	tokens, _ := authentication.CreateToken(user.ID, h.tokenCfg)
+	tokens, err := authentication.CreateToken(user.ID, h.tokenCfg)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.Header("Authorization", "Bearer "+tokens.AccessToken)
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
@@ -101,6 +106,7 @@ func (h *Handler) Login(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
+	c.Header("Authorization", "Bearer "+tokens.AccessToken)
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
@@ -116,6 +122,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
+	c.Header("Authorization", "Bearer "+tokens.AccessToken)
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
