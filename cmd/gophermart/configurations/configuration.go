@@ -60,7 +60,7 @@ func New() *Config {
 
 	fmt.Println(*flagDataBaseURI)
 	if *flagDataBaseURI != DataBaseURI {
-		dbCfg.DataBaseURI = *flagDataBaseURI
+		dbCfg.DataBaseURI = "postgresql://" + *flagDataBaseURI
 	}
 
 	wpConf := ConfigWorkerPool{
