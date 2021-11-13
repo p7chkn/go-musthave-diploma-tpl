@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgconn"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database/postgres"
@@ -46,6 +47,12 @@ func main() {
 	if pingErr != nil {
 		log.Infof("Ping error: %v", pingErr)
 	}
+
+	pgConn, err := pgconn.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Infof("pgconn failed to connect: %v", err)
+	}
+	defer pgConn.Close(context.Background())
 
 	log.Info("Starting setup db")
 	services.MustSetupDatabase(ctx, db, log)
