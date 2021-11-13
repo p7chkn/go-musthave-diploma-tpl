@@ -37,7 +37,7 @@ type ConfigToken struct {
 }
 
 type ConfigDatabase struct {
-	DataBaseURI string `env:"DATABASE_DSN"`
+	DataBaseURI string `env:"DATABASE_URI"`
 }
 
 type ConfigWorkerPool struct {
@@ -91,6 +91,8 @@ func New() *Config {
 	}
 
 	cfg.AccrualSystemAdress += "api/orders/"
+
+	cfg.DataBase.DataBaseURI = "postgresql://" + cfg.DataBase.DataBaseURI
 
 	return &cfg
 }
