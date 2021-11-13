@@ -38,6 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	log.Info("Starting setup db")
 	services.MustSetupDatabase(db, log)
