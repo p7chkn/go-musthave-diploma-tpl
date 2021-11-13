@@ -2,7 +2,6 @@ package configurations
 
 import (
 	"flag"
-	"fmt"
 	"github.com/caarlos0/env"
 	"log"
 )
@@ -58,9 +57,8 @@ func New() *Config {
 	flagAccrualSystemAdress := flag.String("r", AccrualSystemAdress, "URL for accrual system")
 	flag.Parse()
 
-	fmt.Println(*flagDataBaseURI)
 	if *flagDataBaseURI != DataBaseURI {
-		dbCfg.DataBaseURI = "postgresql://" + *flagDataBaseURI
+		dbCfg.DataBaseURI = *flagDataBaseURI
 	}
 
 	wpConf := ConfigWorkerPool{
@@ -91,8 +89,6 @@ func New() *Config {
 	}
 
 	cfg.AccrualSystemAdress += "api/orders/"
-
-	cfg.DataBase.DataBaseURI = "postgresql://postgres:postgres@localhost:5432?sslmode=disable"
 
 	return &cfg
 }
