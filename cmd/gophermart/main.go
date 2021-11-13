@@ -48,7 +48,7 @@ func main() {
 		log.Infof("Ping error: %v", pingErr)
 	}
 
-	pgConn, err := pgconn.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	pgConn, err := pgconn.Connect(context.Background(), cfg.DataBase.DataBaseURI)
 	if err != nil {
 		log.Infof("pgconn failed to connect: %v", err)
 	}
