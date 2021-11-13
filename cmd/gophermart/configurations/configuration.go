@@ -37,7 +37,7 @@ type ConfigToken struct {
 }
 
 type ConfigDatabase struct {
-	DataBaseURI string `env:"DATABASE_URI"`
+	DataBaseURI string `env:"DATABASE_DSN"`
 }
 
 type ConfigWorkerPool struct {
