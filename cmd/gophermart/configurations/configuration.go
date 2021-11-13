@@ -58,7 +58,7 @@ func New() *Config {
 	flagAccrualSystemAdress := flag.String("r", AccrualSystemAdress, "URL for accrual system")
 	flag.Parse()
 
-	fmt.Println(flagDataBaseURI)
+	fmt.Println(*flagDataBaseURI)
 	if *flagDataBaseURI != DataBaseURI {
 		dbCfg.DataBaseURI = *flagDataBaseURI
 	}
