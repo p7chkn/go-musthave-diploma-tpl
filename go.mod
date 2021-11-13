@@ -8,7 +8,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/jackc/pgerrcode v0.0.0-20201024163028-a0d42d470451
 	github.com/lib/pq v1.10.3
-	github.com/pressly/goose v2.7.0+incompatible
+	github.com/pressly/goose/v3 v3.3.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.19.1
 )
@@ -21,7 +21,6 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
-	github.com/kr/pretty v0.2.1 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect

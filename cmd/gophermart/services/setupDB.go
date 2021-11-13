@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/pressly/goose"
+	"github.com/pressly/goose/v3"
 )
 
 func MustSetupDatabase(db *sql.DB, log *zap.SugaredLogger) {
