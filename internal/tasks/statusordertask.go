@@ -10,7 +10,7 @@ import (
 )
 
 func NewCheckOrderStatusTask(accrualURL string, log *zap.SugaredLogger,
-	changeStatus func(ctx context.Context, order string, status string, accrual int) error) *CheckOrderStatusTask {
+	changeStatus func(ctx context.Context, order string, status string, accrual float64) error) *CheckOrderStatusTask {
 	return &CheckOrderStatusTask{
 		accrualURL:   accrualURL,
 		log:          log,
@@ -19,15 +19,15 @@ func NewCheckOrderStatusTask(accrualURL string, log *zap.SugaredLogger,
 }
 
 type responseFromAccrualService struct {
-	Order   string `json:"order"`
-	Status  string `json:"status"`
-	Accrual int    `json:"accrual"`
+	Order   string  `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float64 `json:"accrual"`
 }
 
 type CheckOrderStatusTask struct {
 	accrualURL   string
 	log          *zap.SugaredLogger
-	changeStatus func(ctx context.Context, order string, status string, accrual int) error
+	changeStatus func(ctx context.Context, order string, status string, accrual float64) error
 }
 
 func (os *CheckOrderStatusTask) GetTitle() string {

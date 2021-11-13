@@ -60,7 +60,7 @@ func (db *PostgreDataBase) getOrder(ctx context.Context, number string) (*models
 	return resultOrder, nil
 }
 
-func (db *PostgreDataBase) ChangeOrderStatus(ctx context.Context, order string, status string, accrual int) error {
+func (db *PostgreDataBase) ChangeOrderStatus(ctx context.Context, order string, status string, accrual float64) error {
 	sqlChangeOrderStatus := `UPDATE orders SET accrual = $1, status = $2 WHERE number = $3`
 	sqlAddUserBalance := `UPDATE users SET balance = balance + $1 WHERE id = $2`
 	userID, err := db.getUserIDByOrder(ctx, order)
