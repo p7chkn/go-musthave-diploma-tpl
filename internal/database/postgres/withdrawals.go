@@ -26,7 +26,7 @@ func (db *PostgreDataBase) CreateWithdraw(ctx context.Context, withdraw models.W
 	if !enough {
 		return customerrors.NewNotEnoughBalanceForWithdraw()
 	}
-	_, err = tx.ExecContext(ctx, "UPDATE users SET balance = balance - $1 WHERE id = $2", withdraw.Sum, userID)
+	_, err = tx.ExecContext(ctx, "UPDATE users SET balance = balance - $1, spend = spend + $1 WHERE id = $2", withdraw.Sum, userID)
 	if err != nil {
 		return err
 	}

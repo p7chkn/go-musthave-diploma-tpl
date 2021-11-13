@@ -8,6 +8,7 @@ import (
 )
 
 func (db *PostgreDataBase) CreateUser(ctx context.Context, user models.User) (*models.User, error) {
+	fmt.Println(user)
 	sqlCreateUser := `INSERT INTO users (login, password, first_name, last_name) VALUES ($1, crypt($2, gen_salt('bf', 8)), $3, $4)`
 	_, err := db.conn.ExecContext(ctx, sqlCreateUser, user.Login, user.Password, user.FirstName, user.LastName)
 	if err != nil {
