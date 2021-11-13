@@ -12,7 +12,6 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
 	"go.uber.org/zap"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -100,8 +99,6 @@ func (h *Handler) Login(c *gin.Context) {
 	fmt.Println(data)
 	defer c.Request.Body.Close()
 
-	body, _ := io.ReadAll(c.Request.Body)
-	fmt.Println(body)
 	user, err := h.repo.CheckPassword(c.Request.Context(), data)
 	if err != nil {
 		h.handleError(c, err)
@@ -200,6 +197,10 @@ func (h *Handler) GetOrders(c *gin.Context) {
 	orders, err := h.repo.GetOrders(c.Request.Context(), c.GetString("userID"))
 	if err != nil {
 		h.handleError(c, err)
+		return
+	}
+	if len(orders) == 0 {
+		c.String(http.StatusNoContent, "")
 		return
 	}
 	c.IndentedJSON(http.StatusOK, orders)

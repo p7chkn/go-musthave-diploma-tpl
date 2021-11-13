@@ -28,7 +28,7 @@ func (u *User) Validate() []error {
 
 func (u *User) validatePassword() []error {
 	errorSlice := []error{}
-	if len(u.Password) < 6 {
+	if len(u.Password) < 4 {
 		errorSlice = append(errorSlice, errors.New("password must be at least 6 characters"))
 	}
 	if utils.IsNumeric(u.Password) {
@@ -39,7 +39,7 @@ func (u *User) validatePassword() []error {
 
 func (u *User) validateLogin() []error {
 	errorSlice := []error{}
-	if len(u.Login) < 6 {
+	if len(u.Login) < 4 {
 		errorSlice = append(errorSlice, errors.New("login must be at least 6 characters"))
 	}
 	return errorSlice

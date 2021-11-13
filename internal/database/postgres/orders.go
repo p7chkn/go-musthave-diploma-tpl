@@ -39,7 +39,7 @@ func (db *PostgreDataBase) GetOrders(ctx context.Context, userID string) ([]mode
 	for rows.Next() {
 		var order models.ResponseOrderWithAccrual
 		if err = rows.Scan(&order.Number, &order.Status, &order.UploadedAt, &order.Accrual); err != nil {
-			return result, nil
+			return result, err
 		}
 		result = append(result, order)
 

@@ -93,7 +93,7 @@ func New() *Config {
 		log.Fatal(err)
 	}
 
-	cfg.AccrualSystemAdress += "api/orders/"
+	cfg.AccrualSystemAdress += "/api/orders/"
 
 	return &cfg
 }
