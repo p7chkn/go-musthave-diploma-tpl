@@ -3,12 +3,10 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 )
 
 func (db *PostgreDataBase) CreateUser(ctx context.Context, user models.User) (*models.User, error) {
-	fmt.Println(user)
 	sqlCreateUser := `INSERT INTO users (login, password, first_name, last_name) VALUES ($1, crypt($2, gen_salt('bf', 8)), $3, $4)`
 	_, err := db.conn.ExecContext(ctx, sqlCreateUser, user.Login, user.Password, user.FirstName, user.LastName)
 	if err != nil {
@@ -23,21 +21,10 @@ func (db *PostgreDataBase) CreateUser(ctx context.Context, user models.User) (*m
 
 func (db *PostgreDataBase) CheckPassword(ctx context.Context, user models.User) (models.User, error) {
 	resultUser := models.User{}
-	fmt.Println(user)
-
-	var pass string
-	q := db.conn.QueryRowContext(ctx, `SELECT password FROM users WHERE login = $1`, user.Login)
-	err := q.Scan(&pass)
-	fmt.Println(pass)
-
-	q2 := db.conn.QueryRowContext(ctx, `SELECT crypt($2, password) FROM users WHERE login = $1`, user.Login, user.Password)
-
-	err = q2.Scan(&pass)
-	fmt.Println(pass)
 
 	sqlCheckUserPassword := `SELECT id FROM users WHERE login = $1 AND password = crypt($2, password) FETCH FIRST ROW ONLY;`
 	query := db.conn.QueryRowContext(ctx, sqlCheckUserPassword, user.Login, user.Password)
-	err = query.Scan(&resultUser.ID)
+	err := query.Scan(&resultUser.ID)
 	if err != nil {
 		return resultUser, errors.New("wrong login or password")
 	}

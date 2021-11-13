@@ -96,7 +96,6 @@ func (h *Handler) Login(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	fmt.Println(data)
 	defer c.Request.Body.Close()
 
 	user, err := h.repo.CheckPassword(c.Request.Context(), data)
