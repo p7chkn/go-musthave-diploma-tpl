@@ -35,6 +35,13 @@ func main() {
 
 	log.Info("Finish parse configurations, starting connection to db")
 	log.Info(cfg.DataBase.DataBaseURI)
+
+	pgConn, err := pgconn.Connect(context.Background(), cfg.DataBase.DataBaseURI)
+	if err != nil {
+		log.Infof("pgconn failed to connect: %v", err)
+	}
+	defer pgConn.Close(context.Background())
+
 	db, err := sql.Open("postgres", cfg.DataBase.DataBaseURI)
 	log.Info("Finish db connection")
 	if err != nil {
@@ -47,12 +54,6 @@ func main() {
 	if pingErr != nil {
 		log.Infof("Ping error: %v", pingErr)
 	}
-
-	pgConn, err := pgconn.Connect(context.Background(), cfg.DataBase.DataBaseURI)
-	if err != nil {
-		log.Infof("pgconn failed to connect: %v", err)
-	}
-	defer pgConn.Close(context.Background())
 
 	log.Info("Starting setup db")
 	services.MustSetupDatabase(ctx, db, log)
