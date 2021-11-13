@@ -26,16 +26,16 @@ func (db *PostgreDataBase) CheckPassword(ctx context.Context, user models.User) 
 	fmt.Println(user)
 
 	var pass string
-	q := db.conn.QueryRowContext(ctx, `SELECT password FROM users WHERE login = lower($1)`, user.Login)
+	q := db.conn.QueryRowContext(ctx, `SELECT password FROM users WHERE login = $1`, user.Login)
 	err := q.Scan(&pass)
 	fmt.Println(pass)
 
-	q2 := db.conn.QueryRowContext(ctx, `SELECT crypt($2, password) FROM users WHERE login = lower($1)`, user.Login, user.Password)
+	q2 := db.conn.QueryRowContext(ctx, `SELECT crypt($2, password) FROM users WHERE login = $1`, user.Login, user.Password)
 
 	err = q2.Scan(&pass)
 	fmt.Println(pass)
 
-	sqlCheckUserPassword := `SELECT id FROM users WHERE login = lower($1) AND password = crypt($2, password) FETCH FIRST ROW ONLY;`
+	sqlCheckUserPassword := `SELECT id FROM users WHERE login = $1 AND password = crypt($2, password) FETCH FIRST ROW ONLY;`
 	query := db.conn.QueryRowContext(ctx, sqlCheckUserPassword, user.Login, user.Password)
 	err = query.Scan(&resultUser.ID)
 	if err != nil {
