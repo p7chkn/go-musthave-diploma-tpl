@@ -41,6 +41,12 @@ func main() {
 	}
 	defer db.Close()
 
+	pingErr := db.Ping()
+
+	if pingErr != nil {
+		log.Info(pingErr)
+	}
+
 	log.Info("Starting setup db")
 	services.MustSetupDatabase(ctx, db, log)
 
