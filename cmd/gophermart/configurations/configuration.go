@@ -8,7 +8,7 @@ import (
 
 const (
 	ServerAdress = "localhost:8000"
-	DataBaseURI  = "postgresql://postgres:1234@localhost:5432?sslmode=disable"
+	DataBaseURI  = ""
 	//DataBaseURI = ""
 	AccrualSystemAdress        = "http://localhost:8080/"
 	AccessTokenLiveTimeMinutes = 15
