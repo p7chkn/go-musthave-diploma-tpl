@@ -6,8 +6,8 @@ import (
 )
 
 type UserBalance struct {
-	Balance int `json:"current"`
-	Spent   int `json:"withdrawn"`
+	Balance float64 `json:"current"`
+	Spent   float64 `json:"withdrawn"`
 }
 
 type User struct {

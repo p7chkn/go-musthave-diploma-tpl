@@ -6,7 +6,7 @@ CREATE TABLE withdrawals (
     order_number VARCHAR (50) NOT NULL UNIQUE ,
     status VARCHAR(50) DEFAULT 'NEW',
     processed_at TIMESTAMP,
-    sum INT
+    sum FLOAT
 );
 -- +goose StatementEnd
 

@@ -9,8 +9,8 @@ CREATE TABLE users (
     password TEXT NOT NULL,
     first_name VARCHAR(50),
     last_name VARCHAR(50),
-    balance INT DEFAULT 0,
-    spend INT DEFAULT 0
+    balance FLOAT DEFAULT 0,
+    spend FLOAT DEFAULT 0
 );
 -- +goose StatementEnd
 

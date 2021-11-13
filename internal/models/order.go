@@ -11,7 +11,7 @@ type Order struct {
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
 	UploadedAt time.Time `json:"uploaded_at"`
-	Accrual    int       `json:"accrual"`
+	Accrual    float64   `json:"accrual"`
 }
 
 type ResponseOrder struct {
@@ -22,7 +22,7 @@ type ResponseOrder struct {
 
 type ResponseOrderWithAccrual struct {
 	ResponseOrder
-	Accrual int `json:"accrual"`
+	Accrual float64 `json:"accrual"`
 }
 
 func (ro ResponseOrderWithAccrual) MarshalJSON() ([]byte, error) {

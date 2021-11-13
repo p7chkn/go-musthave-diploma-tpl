@@ -14,7 +14,7 @@ func JWTMiddleware(accessSecret string, log *zap.SugaredLogger) gin.HandlerFunc 
 			message := make(map[string]string)
 			log.Warnf("Wrong request occuped on %v: %v", c.Request.RequestURI, err.Error())
 			message["detail"] = err.Error()
-			c.IndentedJSON(http.StatusBadRequest, message)
+			c.IndentedJSON(http.StatusUnauthorized, message)
 			c.Abort()
 			return
 		}

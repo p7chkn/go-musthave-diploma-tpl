@@ -6,7 +6,7 @@ CREATE TABLE orders (
    number VARCHAR(50) NOT NULL UNIQUE,
    status VARCHAR(50),
    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-   accrual INT DEFAULT 0
+   accrual FLOAT DEFAULT 0
 );
 -- +goose StatementEnd
 
