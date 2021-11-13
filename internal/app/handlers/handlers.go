@@ -12,6 +12,7 @@ import (
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
 	"go.uber.org/zap"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -96,6 +97,11 @@ func (h *Handler) Login(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
+	fmt.Println(data)
+	defer c.Request.Body.Close()
+
+	body, _ := io.ReadAll(c.Request.Body)
+	fmt.Println(body)
 	user, err := h.repo.CheckPassword(c.Request.Context(), data)
 	if err != nil {
 		h.handleError(c, err)

@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
 )
 
@@ -22,7 +21,6 @@ func (db *PostgreDataBase) CreateUser(ctx context.Context, user models.User) (*m
 
 func (db *PostgreDataBase) CheckPassword(ctx context.Context, user models.User) (models.User, error) {
 	resultUser := models.User{}
-	fmt.Println(resultUser)
 	sqlCheckUserPassword := `SELECT id FROM users WHERE login = lower($1) AND password = crypt($2, password) FETCH FIRST ROW ONLY;`
 	query := db.conn.QueryRowContext(ctx, sqlCheckUserPassword, user.Login, user.Password)
 	err := query.Scan(&resultUser.ID)

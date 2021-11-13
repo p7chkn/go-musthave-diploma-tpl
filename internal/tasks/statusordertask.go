@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -41,6 +42,8 @@ func (os *CheckOrderStatusTask) CreateFunction(parameters map[string]string) (fu
 	}
 	return func(ctx context.Context) error {
 		response, err := http.Get(os.accrualURL + orderNumber)
+
+		fmt.Println(os.accrualURL)
 		if err != nil {
 			os.log.Warn("Problem with access accrual service")
 			return errors.New("problem with access accrual service")
