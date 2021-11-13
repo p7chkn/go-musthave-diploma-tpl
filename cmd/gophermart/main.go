@@ -44,7 +44,7 @@ func main() {
 	pingErr := db.Ping()
 
 	if pingErr != nil {
-		log.Info(pingErr)
+		log.Infof("Ping error: %v", pingErr)
 	}
 
 	log.Info("Starting setup db")
