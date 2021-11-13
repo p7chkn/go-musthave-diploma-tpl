@@ -92,7 +92,7 @@ func New() *Config {
 
 	cfg.AccrualSystemAdress += "api/orders/"
 
-	cfg.DataBase.DataBaseURI = "postgresql://" + cfg.DataBase.DataBaseURI
+	cfg.DataBase.DataBaseURI = "postgresql://localhost:5432?sslmode=disable"
 
 	return &cfg
 }
