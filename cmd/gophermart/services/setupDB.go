@@ -7,11 +7,8 @@ import (
 )
 
 func MustSetupDatabase(ctx context.Context, db *sql.DB, log *zap.SugaredLogger) {
-	createUsersSQL := `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-						   CREATE EXTENSION IF NOT EXISTS pgcrypto;
-	
-						   CREATE TABLE IF NOT EXISTS users (
-							   id uuid DEFAULT uuid_generate_v4 () PRIMARY KEY,
+	createUsersSQL := `CREATE TABLE IF NOT EXISTS users (
+							   id SERIAL PRIMARY KEY,
 							   login VARCHAR(50) NOT NULL UNIQUE,
 	                      	   password TEXT NOT NULL,
 							   first_name VARCHAR(50),
