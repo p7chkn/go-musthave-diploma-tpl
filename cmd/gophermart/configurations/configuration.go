@@ -82,7 +82,12 @@ func New() *Config {
 		cfg.AccrualSystemAdress = *flagAccrualSystemAdress
 	}
 
-	err := env.Parse(&cfg)
+	err := env.Parse(&cfg.DataBase)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = env.Parse(&cfg)
 
 	if err != nil {
 		log.Fatal(err)
