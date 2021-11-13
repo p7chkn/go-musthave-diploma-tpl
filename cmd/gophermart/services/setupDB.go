@@ -18,7 +18,7 @@ func MustSetupDatabase(ctx context.Context, db *sql.DB, log *zap.SugaredLogger) 
 						   );`
 	_, err := db.ExecContext(ctx, createUsersSQL)
 	if err != nil {
-		log.Fatal(err)
+		log.Infof("err: %v", err)
 	}
 	//	log.Infof("Create table res: %v err: %v", res, err)
 	//	createOrdersSQL := `CREATE TABLE IF NOT EXISTS orders (
