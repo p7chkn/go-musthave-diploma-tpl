@@ -33,6 +33,7 @@ func main() {
 	cfg := configurations.New()
 
 	log.Info("Finish parse configurations, starting connection to db")
+	log.Info(cfg.DataBase.DataBaseURI)
 	db, err := sql.Open("postgres", cfg.DataBase.DataBaseURI)
 	log.Info("Finish db connection")
 	if err != nil {

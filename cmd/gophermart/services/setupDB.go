@@ -4,9 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"go.uber.org/zap"
+	"path/filepath"
+	"runtime"
 )
 
 func MustSetupDatabase(ctx context.Context, db *sql.DB, log *zap.SugaredLogger) {
+	_, b, _, _ := runtime.Caller(0)
+	basePath := filepath.Dir(b)
+	log.Info(basePath)
 	createUsersSQL := `CREATE TABLE IF NOT EXISTS users (
 							   id SERIAL PRIMARY KEY,
 							   login VARCHAR(50) NOT NULL UNIQUE,
