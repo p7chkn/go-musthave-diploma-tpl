@@ -3,9 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"github.com/gin-gonic/gin"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/app/logger"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database/postgres"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/tasks"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
-	"log"
+	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,43 +17,54 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/services"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/database"
 )
 
 func main() {
 
-	log.Println("Starting server")
+	gin.SetMode(gin.ReleaseMode)
+	log := logger.InitLogger()
+
+	stdlog.SetOutput(os.Stdout)
+
+	log.Info("Starting server")
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log.Println("Starting parse configuration")
+	log.Info("Starting parse configuration")
 	cfg := configurations.New()
 
-	log.Println("Finish parse configurations, starting connection to db")
+	log.Info("Finish parse configurations, starting connection to db")
 	db, err := sql.Open("postgres", cfg.DataBase.DataBaseURI)
-	log.Println("Finish db connection")
+	log.Info("Finish db connection")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
-	log.Println("Starting setup db")
-	services.MustSetupDatabase(ctx, db)
+	log.Info("Starting setup db")
+	services.MustSetupDatabase(db, log)
 
-	log.Println("Finish setup db")
-	wp := workers.New(ctx, cfg.WorkerPool.NumOfWorkers, cfg.WorkerPool.PoolBuffer)
+	log.Info("Finish setup db")
+	repo := postgres.NewDatabase(db)
+	jobStore := postgres.NewJobStore(db)
+	var listTask []tasks.TaskInterface
+	listTask = append(listTask, tasks.NewCheckOrderStatusTask(cfg.AccrualSystemAdress, log, repo.ChangeOrderStatus))
+	taskStore := tasks.NewTaskStore(listTask)
+
+	wp := workers.New(jobStore, taskStore, &cfg.WorkerPool, log)
 
 	go func() {
 		wp.Run(ctx)
 	}()
 
-	repo := database.NewDatabaseRepository(db)
-	handler := services.SetupRouter(repo, &cfg.Token, wp)
+	handler := services.SetupRouter(repo, jobStore, &cfg.Token, log)
 
 	server := &http.Server{
 		Addr:    cfg.ServerAdress,
 		Handler: handler,
 	}
 	go func() {
-		log.Println(server.ListenAndServe())
+		log.Info("Starting server")
+		log.Info(server.ListenAndServe())
 		cancel()
 	}()
 

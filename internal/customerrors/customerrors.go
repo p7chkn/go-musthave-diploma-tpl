@@ -5,22 +5,26 @@ import (
 	"fmt"
 )
 
-type ErrorWithAccrualSystem struct {
-	Err   error
-	Title string
+type BaseError struct {
+	Err error
 }
 
-func (err *ErrorWithAccrualSystem) Error() string {
+func (err *BaseError) Error() string {
 	return fmt.Sprintf("%v", err.Err)
 }
 
-func (err *ErrorWithAccrualSystem) Unwrap() error {
+func (err *BaseError) Unwrap() error {
 	return err.Err
 }
 
-func NewRepeatError() *ErrorWithAccrualSystem {
-	return &ErrorWithAccrualSystem{
-		Err:   errors.New("need repeat"),
-		Title: "Need repeat",
+type RepeatError struct {
+	BaseError
+}
+
+func NewRepeatError() *RepeatError {
+	return &RepeatError{
+		BaseError{
+			Err: errors.New("need repeat"),
+		},
 	}
 }

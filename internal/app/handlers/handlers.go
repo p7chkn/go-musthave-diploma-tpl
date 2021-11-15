@@ -2,15 +2,20 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/p7chkn/go-musthave-diploma-tpl/cmd/gophermart/configurations"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/authentication"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/customerrors"
 	"github.com/p7chkn/go-musthave-diploma-tpl/internal/models"
-	"github.com/p7chkn/go-musthave-diploma-tpl/internal/workers"
+	"github.com/p7chkn/go-musthave-diploma-tpl/internal/utils"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
+	"strconv"
+	"time"
 )
 
 //go:generate mockery --name=RepositoryInterface --structname=MockRepositoryInterface --inpackage
@@ -19,27 +24,39 @@ type RepositoryInterface interface {
 	CreateUser(ctx context.Context, user models.User) (*models.User, error)
 	CheckPassword(ctx context.Context, user models.User) (models.User, error)
 	CreateOrder(ctx context.Context, order models.Order) error
-	GetOrders(ctx context.Context, userID string) ([]interface{}, error)
+	GetOrders(ctx context.Context, userID string) ([]models.ResponseOrderWithAccrual, error)
 	GetBalance(ctx context.Context, userID string) (models.UserBalance, error)
+	CreateWithdraw(ctx context.Context, withdraw models.Withdraw, userID string) error
+	GetWithdrawals(ctx context.Context, userID string) ([]models.Withdraw, error)
+	ChangeOrderStatus(ctx context.Context, order string, status string, accrual float64) error
 }
 
-func New(repo RepositoryInterface, tokenCfg *configurations.ConfigToken, wp *workers.WorkerPool) *Handler {
+//go:generate mockery --name=JobStoreInterface --structname=MockJobStoreInterface --inpackage
+type JobStoreInterface interface {
+	AddJob(ctx context.Context, job models.JobStoreRow) error
+}
+
+func New(repo RepositoryInterface, jobStore JobStoreInterface, tokenCfg *configurations.ConfigToken,
+	log *zap.SugaredLogger) *Handler {
 	return &Handler{
 		repo:     repo,
+		jobStore: jobStore,
 		tokenCfg: tokenCfg,
-		wp:       wp,
+		log:      log,
 	}
 }
 
 type Handler struct {
 	repo     RepositoryInterface
+	jobStore JobStoreInterface
 	tokenCfg *configurations.ConfigToken
-	wp       *workers.WorkerPool
+	log      *zap.SugaredLogger
 }
 
 func (h *Handler) PingDB(c *gin.Context) {
 	err := h.repo.Ping(c.Request.Context())
 	if err != nil {
+		h.log.Errorf("Error occuped on %v: %v", c.Request.RequestURI, err.Error())
 		c.String(http.StatusInternalServerError, "")
 		return
 	}
@@ -63,7 +80,12 @@ func (h *Handler) Register(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-	tokens, _ := authentication.CreateToken(user.ID, h.tokenCfg)
+	tokens, err := authentication.CreateToken(user.ID, h.tokenCfg)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.Header("Authorization", "Bearer "+tokens.AccessToken)
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
@@ -74,6 +96,8 @@ func (h *Handler) Login(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
+	defer c.Request.Body.Close()
+
 	user, err := h.repo.CheckPassword(c.Request.Context(), data)
 	if err != nil {
 		h.handleError(c, err)
@@ -84,6 +108,7 @@ func (h *Handler) Login(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
+	c.Header("Authorization", "Bearer "+tokens.AccessToken)
 	c.IndentedJSON(http.StatusOK, tokens)
 }
 
@@ -112,25 +137,53 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	number, err := strconv.Atoi(string(body))
+
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	if !utils.ValidLuhnNumber(number) {
+		c.String(http.StatusUnprocessableEntity, "")
+		return
+	}
+
 	order := models.Order{
 		UserID: c.GetString("userID"),
-		Number: string(body),
+		Number: strconv.Itoa(number),
 		Status: "NEW",
 	}
 
 	err = h.repo.CreateOrder(c.Request.Context(), order)
-	// Тут еще нужно учесть вариации ошибок:
-	// - регистрация заказа, который ты уже регистрировал
-	// - регистрация заказа, который регистрировал кто-то другой
-	// - валидация номера заказа
-	// Вопрос:  нужна ли тут собственного типа ошибка?
-	//
-	// Так же идея еще в том, чтобы в этом проекте был воркерпулл
-	// чтобы в фоне здесь отправить задачи о запросе во внешнюю систему,
-	// для обработки заказа, в зависимости от ответа системы, изменять статус заказа
-	// если статус заказа не окончательный, повторить запрос через N секунд, если статус окончательный,
-	// освободить воркера и вероятно, еще нужно добавить поле о дате завершения заказа в таблицу заказов
 
+	if err != nil {
+		var selfRegisterError *customerrors.OrderAlreadyRegisterByYou
+		if errors.As(err, &selfRegisterError) {
+			c.String(http.StatusOK, "")
+			return
+		}
+		var RegisterError *customerrors.OrderAlreadyRegister
+		if errors.As(err, &RegisterError) {
+			c.String(http.StatusConflict, "")
+		}
+		h.handleError(c, err)
+		return
+	}
+	parameters, err := json.Marshal(&models.CheckOrderStatusParameters{
+		OrderNumber: strconv.Itoa(number),
+	})
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	job := models.JobStoreRow{
+		Type:            "CheckOrderStatus",
+		NextTimeExecute: time.Now(),
+		Count:           0,
+		Parameters:      string(parameters),
+	}
+	err = h.jobStore.AddJob(c.Request.Context(), job)
 	if err != nil {
 		h.handleError(c, err)
 		return
@@ -143,6 +196,10 @@ func (h *Handler) GetOrders(c *gin.Context) {
 	orders, err := h.repo.GetOrders(c.Request.Context(), c.GetString("userID"))
 	if err != nil {
 		h.handleError(c, err)
+		return
+	}
+	if len(orders) == 0 {
+		c.String(http.StatusNoContent, "")
 		return
 	}
 	c.IndentedJSON(http.StatusOK, orders)
@@ -158,20 +215,46 @@ func (h *Handler) GetBalance(c *gin.Context) {
 }
 
 func (h *Handler) MakeWithdraw(c *gin.Context) {
-	// Тут в задании довольно непонятно:
-	// - либо мы тут создаем новый заказ, но с отрицательныйм accrual
-	// - либо мы ищем текущий заказ (среди зарегестрированных) и устанавливаем ему accrual
-	// Отправлять ли тут так же в сторонний сервис запросы о состоянии заказа?
+	withdraw := models.Withdraw{}
+	err := c.BindJSON(&withdraw)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	number, err := strconv.Atoi(withdraw.OrderNumber)
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	if !utils.ValidLuhnNumber(number) {
+		c.String(http.StatusUnprocessableEntity, "")
+		return
+	}
+	err = h.repo.CreateWithdraw(c.Request.Context(), withdraw, c.GetString("userID"))
+	if err != nil {
+		var balanceError *customerrors.NotEnoughBalanceForWithdraw
+		if errors.As(err, &balanceError) {
+			c.String(http.StatusPaymentRequired, "")
+			return
+		}
+		h.handleError(c, err)
+		return
+	}
+	c.String(http.StatusOK, "")
 }
 
 func (h *Handler) GetWithdraws(c *gin.Context) {
-	// Тут несколько зависит от роута выше. Пока не сильно ясно.
-	// тут поле называется sum а в другом месте accrual специально?
-	// по сути, это же та же сущность, что и заказы, просто те из них, что с отрицательным accrual?
+	withdrawals, err := h.repo.GetWithdrawals(c.Request.Context(), c.GetString("userID"))
+	if err != nil {
+		h.handleError(c, err)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, withdrawals)
 }
 
 func (h *Handler) handleError(c *gin.Context, err error) {
 	message := make(map[string]string)
+	h.log.Warnf("Wrong request occuped on %v: %v", c.Request.RequestURI, err.Error())
 	message["detail"] = err.Error()
 	c.IndentedJSON(http.StatusBadRequest, message)
 }
