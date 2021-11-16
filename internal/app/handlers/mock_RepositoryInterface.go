@@ -14,20 +14,6 @@ type MockRepositoryInterface struct {
 	mock.Mock
 }
 
-// ChangeOrderStatus provides a mock function with given fields: ctx, order, status, accrual
-func (_m *MockRepositoryInterface) ChangeOrderStatus(ctx context.Context, order string, status string, accrual float64) error {
-	ret := _m.Called(ctx, order, status, accrual)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, float64) error); ok {
-		r0 = rf(ctx, order, status, accrual)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // CheckPassword provides a mock function with given fields: ctx, user
 func (_m *MockRepositoryInterface) CheckPassword(ctx context.Context, user models.User) (models.User, error) {
 	ret := _m.Called(ctx, user)

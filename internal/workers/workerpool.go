@@ -50,7 +50,7 @@ func (wp *WorkerPool) Run(ctx context.Context) {
 	for i := 0; i < wp.numOfWorkers; i++ {
 		wg.Add(1)
 		go func(i int) {
-			wp.log.Infof("Worker #%v start \n", i)
+			wp.log.Infof("Worker #%v start", i)
 		outer:
 			for {
 				select {
@@ -73,7 +73,7 @@ func (wp *WorkerPool) Run(ctx context.Context) {
 				}
 
 			}
-			wp.log.Infof("Worker #%v close\n", i)
+			wp.log.Infof("Worker #%v close", i)
 			wg.Done()
 		}(i)
 	}
@@ -94,7 +94,6 @@ func (wp *WorkerPool) scheduler(ctx context.Context) *time.Ticker {
 		for {
 			select {
 			case <-ticker.C:
-				wp.log.Info("ticker tick")
 				wp.transferTaskToWorkerPool(ctx)
 			case <-ctx.Done():
 				return
