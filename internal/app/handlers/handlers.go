@@ -28,7 +28,6 @@ type RepositoryInterface interface {
 	GetBalance(ctx context.Context, userID string) (models.UserBalance, error)
 	CreateWithdraw(ctx context.Context, withdraw models.Withdraw, userID string) error
 	GetWithdrawals(ctx context.Context, userID string) ([]models.Withdraw, error)
-	ChangeOrderStatus(ctx context.Context, order string, status string, accrual float64) error
 }
 
 //go:generate mockery --name=JobStoreInterface --structname=MockJobStoreInterface --inpackage
